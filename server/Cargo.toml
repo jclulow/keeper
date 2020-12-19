@@ -1,0 +1,20 @@
+[package]
+name = "keeper-server"
+version = "0.1.0"
+authors = ["Joshua M. Clulow <josh@sysmgr.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = [ "derive" ] }
+serde_json = "1"
+getopts = "0.2"
+dropshot = "0.3.0"
+anyhow = "1"
+tokio = { version = "0.2", features = ["full"] }
+slog = "2.5"
+schemars = { version = "0.7", features = [ "chrono", "uuid" ] }
+hyper = "0.13"
+toml = "0.5"
+chrono = "0.4"
