@@ -1,0 +1,14 @@
+.gitignore
+.travis.yml
+Cargo.toml
+README.md
+docs/DefaultApi.md
+docs/InlineObject.md
+docs/InlineResponse201.md
+src/apis/configuration.rs
+src/apis/default_api.rs
+src/apis/mod.rs
+src/lib.rs
+src/models/inline_object.rs
+src/models/inline_response_201.rs
+src/models/mod.rs
