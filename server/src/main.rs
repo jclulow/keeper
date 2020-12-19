@@ -221,7 +221,8 @@ async fn main() -> Result<()> {
     let mut opts = Options::new();
 
     opts.optopt("b", "", "bind address:port", "BIND_ADDRESS");
-    opts.reqopt("d", "", "data directory", "DIRECTORY");
+    opts.optopt("d", "", "data directory", "DIRECTORY");
+    opts.optopt("S", "", "dump OpenAPI schema", "FILE");
 
     let p = match opts.parse(std::env::args().skip(1)) {
         Ok(p) => p,
@@ -232,8 +233,33 @@ async fn main() -> Result<()> {
         }
     };
 
+    let mut api = ApiDescription::new();
+    api.register(report_post).unwrap();
+
+    if let Some(s) = p.opt_str("S") {
+        let mut f = std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&s)?;
+        api.print_openapi(&mut f,
+            &"Keeper API".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &"1.0".to_string())?;
+        return Ok(());
+    }
+
     let bind = p.opt_str("b").unwrap_or(String::from("0.0.0.0:9978"));
-    let dir = PathBuf::from(p.opt_str("d").unwrap());
+    let dir = if let Some(d) = p.opt_str("d") {
+        PathBuf::from(d)
+    } else {
+        bail!("ERROR: must specify data directory (-d)");
+    };
     if !dir.is_dir() {
         bail!("ERROR: {} should be a directory", dir.display());
     }
@@ -246,9 +272,6 @@ async fn main() -> Result<()> {
     let app = Arc::new(App {
         dir,
     });
-
-    let mut api = ApiDescription::new();
-    api.register(report_post).unwrap();
 
     let cfgds = ConfigDropshot {
         bind_address: bind.parse()?,
