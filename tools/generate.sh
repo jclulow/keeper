@@ -32,7 +32,7 @@ done
 
 cd "$root"
 rm -f "$sf"
-cargo run -p keeper-server -- -S "$sf"
+cargo run --release -p keeper-server -- -S "$sf"
 java -jar "$jar" generate -i "$sf" \
     -p packageVersion=0.0.0 \
     -p packageName=keeper-openapi \

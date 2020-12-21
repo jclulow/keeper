@@ -15,15 +15,12 @@
 pub struct InlineResponse201 {
     #[serde(rename = "existed_already")]
     pub existed_already: bool,
-    #[serde(rename = "ok")]
-    pub ok: bool,
 }
 
 impl InlineResponse201 {
-    pub fn new(existed_already: bool, ok: bool) -> InlineResponse201 {
+    pub fn new(existed_already: bool) -> InlineResponse201 {
         InlineResponse201 {
             existed_already,
-            ok,
         }
     }
 }

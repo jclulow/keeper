@@ -2,4 +2,10 @@
 members = [
 	"server",
 	"openapi",
+	"submit",
+	"common",
 ]
+
+#[patch.crates-io]
+#dropshot = { path = "/ws/oxide/dropshot/dropshot" }
+#dropshot_endpoint = { path = "/ws/oxide/dropshot/dropshot_endpoint" }

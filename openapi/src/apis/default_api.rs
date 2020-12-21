@@ -15,20 +15,41 @@ use crate::apis::ResponseContent;
 use super::{Error, configuration};
 
 
-/// struct for typed errors of method `report_post`
+/// struct for typed errors of method `enrol`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum ReportPostError {
+pub enum EnrolError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method `report_finish`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ReportFinishError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method `report_output`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ReportOutputError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method `report_start`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ReportStartError {
     UnknownValue(serde_json::Value),
 }
 
 
-pub async fn report_post(configuration: &configuration::Configuration, host: &str, job: &str, time: i32, inline_object: crate::models::InlineObject) -> Result<crate::models::InlineResponse201, Error<ReportPostError>> {
+pub async fn enrol(configuration: &configuration::Configuration, inline_object: crate::models::InlineObject) -> Result<(), Error<EnrolError>> {
 
     let local_var_client = &configuration.client;
 
-    let local_var_uri_str = format!("{}/report/{host}/{job}/{time}", configuration.base_path, host=crate::apis::urlencode(host), job=crate::apis::urlencode(job), time=time);
-    let mut local_var_req_builder = local_var_client.put(local_var_uri_str.as_str());
+    let local_var_uri_str = format!("{}/enrol", configuration.base_path);
+    let mut local_var_req_builder = local_var_client.post(local_var_uri_str.as_str());
 
     if let Some(ref local_var_user_agent) = configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
@@ -42,9 +63,90 @@ pub async fn report_post(configuration: &configuration::Configuration, host: &st
     let local_var_content = local_var_resp.text().await?;
 
     if local_var_status.is_success() {
+        Ok(())
+    } else {
+        let local_var_entity: Option<EnrolError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
+pub async fn report_finish(configuration: &configuration::Configuration, inline_object1: crate::models::InlineObject1) -> Result<crate::models::InlineResponse201, Error<ReportFinishError>> {
+
+    let local_var_client = &configuration.client;
+
+    let local_var_uri_str = format!("{}/report/finish", configuration.base_path);
+    let mut local_var_req_builder = local_var_client.post(local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = configuration.user_agent {
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&inline_object1);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if local_var_status.is_success() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
-        let local_var_entity: Option<ReportPostError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_entity: Option<ReportFinishError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
+pub async fn report_output(configuration: &configuration::Configuration, inline_object2: crate::models::InlineObject2) -> Result<crate::models::InlineResponse201, Error<ReportOutputError>> {
+
+    let local_var_client = &configuration.client;
+
+    let local_var_uri_str = format!("{}/report/output", configuration.base_path);
+    let mut local_var_req_builder = local_var_client.post(local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = configuration.user_agent {
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&inline_object2);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if local_var_status.is_success() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<ReportOutputError> = serde_json::from_str(&local_var_content).ok();
+        let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+        Err(Error::ResponseError(local_var_error))
+    }
+}
+
+pub async fn report_start(configuration: &configuration::Configuration, inline_object3: crate::models::InlineObject3) -> Result<crate::models::InlineResponse201, Error<ReportStartError>> {
+
+    let local_var_client = &configuration.client;
+
+    let local_var_uri_str = format!("{}/report/start", configuration.base_path);
+    let mut local_var_req_builder = local_var_client.post(local_var_uri_str.as_str());
+
+    if let Some(ref local_var_user_agent) = configuration.user_agent {
+        local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+    }
+    local_var_req_builder = local_var_req_builder.json(&inline_object3);
+
+    let local_var_req = local_var_req_builder.build()?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+    let local_var_status = local_var_resp.status();
+    let local_var_content = local_var_resp.text().await?;
+
+    if local_var_status.is_success() {
+        serde_json::from_str(&local_var_content).map_err(Error::from)
+    } else {
+        let local_var_entity: Option<ReportStartError> = serde_json::from_str(&local_var_content).ok();
         let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
         Err(Error::ResponseError(local_var_error))
     }

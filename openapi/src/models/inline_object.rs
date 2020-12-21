@@ -13,26 +13,17 @@
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct InlineObject {
-    #[serde(rename = "ok")]
-    pub ok: bool,
-    #[serde(rename = "status", skip_serializing_if = "Option::is_none")]
-    pub status: Option<i32>,
-    #[serde(rename = "stderr", skip_serializing_if = "Option::is_none")]
-    pub stderr: Option<String>,
-    #[serde(rename = "stdout", skip_serializing_if = "Option::is_none")]
-    pub stdout: Option<String>,
-    #[serde(rename = "uuid")]
-    pub uuid: String,
+    #[serde(rename = "host")]
+    pub host: String,
+    #[serde(rename = "key")]
+    pub key: String,
 }
 
 impl InlineObject {
-    pub fn new(ok: bool, uuid: String) -> InlineObject {
+    pub fn new(host: String, key: String) -> InlineObject {
         InlineObject {
-            ok,
-            status: None,
-            stderr: None,
-            stdout: None,
-            uuid,
+            host,
+            key,
         }
     }
 }
