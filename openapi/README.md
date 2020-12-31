@@ -32,13 +32,13 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
- - [InlineObject](docs/InlineObject.md)
- - [InlineObject1](docs/InlineObject1.md)
- - [InlineObject2](docs/InlineObject2.md)
- - [InlineObject3](docs/InlineObject3.md)
- - [InlineResponse201](docs/InlineResponse201.md)
+ - [EnrolBody](docs/EnrolBody.md)
  - [OutputRecord](docs/OutputRecord.md)
+ - [ReportFinishBody](docs/ReportFinishBody.md)
  - [ReportId](docs/ReportId.md)
+ - [ReportOutputBody](docs/ReportOutputBody.md)
+ - [ReportResult](docs/ReportResult.md)
+ - [ReportStartBody](docs/ReportStartBody.md)
 
 
 To get access to the crate's generated documentation, use:

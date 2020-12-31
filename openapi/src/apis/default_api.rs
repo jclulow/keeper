@@ -44,7 +44,7 @@ pub enum ReportStartError {
 }
 
 
-pub async fn enrol(configuration: &configuration::Configuration, inline_object: crate::models::InlineObject) -> Result<(), Error<EnrolError>> {
+pub async fn enrol(configuration: &configuration::Configuration, enrol_body: crate::models::EnrolBody) -> Result<(), Error<EnrolError>> {
 
     let local_var_client = &configuration.client;
 
@@ -54,7 +54,7 @@ pub async fn enrol(configuration: &configuration::Configuration, inline_object: 
     if let Some(ref local_var_user_agent) = configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
-    local_var_req_builder = local_var_req_builder.json(&inline_object);
+    local_var_req_builder = local_var_req_builder.json(&enrol_body);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -71,7 +71,7 @@ pub async fn enrol(configuration: &configuration::Configuration, inline_object: 
     }
 }
 
-pub async fn report_finish(configuration: &configuration::Configuration, inline_object1: crate::models::InlineObject1) -> Result<crate::models::InlineResponse201, Error<ReportFinishError>> {
+pub async fn report_finish(configuration: &configuration::Configuration, report_finish_body: crate::models::ReportFinishBody) -> Result<crate::models::ReportResult, Error<ReportFinishError>> {
 
     let local_var_client = &configuration.client;
 
@@ -81,7 +81,7 @@ pub async fn report_finish(configuration: &configuration::Configuration, inline_
     if let Some(ref local_var_user_agent) = configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
-    local_var_req_builder = local_var_req_builder.json(&inline_object1);
+    local_var_req_builder = local_var_req_builder.json(&report_finish_body);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -98,7 +98,7 @@ pub async fn report_finish(configuration: &configuration::Configuration, inline_
     }
 }
 
-pub async fn report_output(configuration: &configuration::Configuration, inline_object2: crate::models::InlineObject2) -> Result<crate::models::InlineResponse201, Error<ReportOutputError>> {
+pub async fn report_output(configuration: &configuration::Configuration, report_output_body: crate::models::ReportOutputBody) -> Result<crate::models::ReportResult, Error<ReportOutputError>> {
 
     let local_var_client = &configuration.client;
 
@@ -108,7 +108,7 @@ pub async fn report_output(configuration: &configuration::Configuration, inline_
     if let Some(ref local_var_user_agent) = configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
-    local_var_req_builder = local_var_req_builder.json(&inline_object2);
+    local_var_req_builder = local_var_req_builder.json(&report_output_body);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -125,7 +125,7 @@ pub async fn report_output(configuration: &configuration::Configuration, inline_
     }
 }
 
-pub async fn report_start(configuration: &configuration::Configuration, inline_object3: crate::models::InlineObject3) -> Result<crate::models::InlineResponse201, Error<ReportStartError>> {
+pub async fn report_start(configuration: &configuration::Configuration, report_start_body: crate::models::ReportStartBody) -> Result<crate::models::ReportResult, Error<ReportStartError>> {
 
     let local_var_client = &configuration.client;
 
@@ -135,7 +135,7 @@ pub async fn report_start(configuration: &configuration::Configuration, inline_o
     if let Some(ref local_var_user_agent) = configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
-    local_var_req_builder = local_var_req_builder.json(&inline_object3);
+    local_var_req_builder = local_var_req_builder.json(&report_start_body);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;

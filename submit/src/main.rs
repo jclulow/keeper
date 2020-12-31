@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
             let cfg = configure(Some(&cf))?;
 
             loop {
-                let res = enrol(&cfg, InlineObject {
+                let res = enrol(&cfg, EnrolBody {
                     host: cf.host.to_string(),
                     key: cf.key.to_string(),
                 }).await;
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
              * Report that the job has started to the server:
              */
             loop {
-                let res = report_start(&cfg, InlineObject3 {
+                let res = report_start(&cfg, ReportStartBody {
                     id: id.clone(),
                     start_time: start_time.clone(),
                     script: script.clone(),
@@ -164,7 +164,7 @@ async fn main() -> Result<()> {
                 match rx.recv()? {
                     Activity::Output(o) => {
                         loop {
-                            let res = report_output(&cfg, InlineObject2 {
+                            let res = report_output(&cfg, ReportOutputBody {
                                 id: id.clone(),
                                 record: o.clone(),
                             }).await;
@@ -178,7 +178,7 @@ async fn main() -> Result<()> {
                     }
                     Activity::Exit(ed) => {
                         loop {
-                            let res = report_finish(&cfg, InlineObject1 {
+                            let res = report_finish(&cfg, ReportFinishBody {
                                 id: id.clone(),
                                 duration_millis: ed.duration_ms as i32,
                                 end_time: ed.when.to_string(),

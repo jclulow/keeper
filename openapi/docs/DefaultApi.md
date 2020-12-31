@@ -13,7 +13,7 @@ Method | HTTP request | Description
 
 ## enrol
 
-> enrol(inline_object)
+> enrol(enrol_body)
 
 
 ### Parameters
@@ -21,7 +21,7 @@ Method | HTTP request | Description
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**inline_object** | [**InlineObject**](InlineObject.md) |  | [required] |
+**enrol_body** | [**EnrolBody**](EnrolBody.md) |  | [required] |
 
 ### Return type
 
@@ -41,7 +41,7 @@ No authorization required
 
 ## report_finish
 
-> crate::models::InlineResponse201 report_finish(inline_object1)
+> crate::models::ReportResult report_finish(report_finish_body)
 
 
 ### Parameters
@@ -49,11 +49,11 @@ No authorization required
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**inline_object1** | [**InlineObject1**](InlineObject1.md) |  | [required] |
+**report_finish_body** | [**ReportFinishBody**](ReportFinishBody.md) |  | [required] |
 
 ### Return type
 
-[**crate::models::InlineResponse201**](inline_response_201.md)
+[**crate::models::ReportResult**](ReportResult.md)
 
 ### Authorization
 
@@ -69,7 +69,7 @@ No authorization required
 
 ## report_output
 
-> crate::models::InlineResponse201 report_output(inline_object2)
+> crate::models::ReportResult report_output(report_output_body)
 
 
 ### Parameters
@@ -77,11 +77,11 @@ No authorization required
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**inline_object2** | [**InlineObject2**](InlineObject2.md) |  | [required] |
+**report_output_body** | [**ReportOutputBody**](ReportOutputBody.md) |  | [required] |
 
 ### Return type
 
-[**crate::models::InlineResponse201**](inline_response_201.md)
+[**crate::models::ReportResult**](ReportResult.md)
 
 ### Authorization
 
@@ -97,7 +97,7 @@ No authorization required
 
 ## report_start
 
-> crate::models::InlineResponse201 report_start(inline_object3)
+> crate::models::ReportResult report_start(report_start_body)
 
 
 ### Parameters
@@ -105,11 +105,11 @@ No authorization required
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**inline_object3** | [**InlineObject3**](InlineObject3.md) |  | [required] |
+**report_start_body** | [**ReportStartBody**](ReportStartBody.md) |  | [required] |
 
 ### Return type
 
-[**crate::models::InlineResponse201**](inline_response_201.md)
+[**crate::models::ReportResult**](ReportResult.md)
 
 ### Authorization
 
