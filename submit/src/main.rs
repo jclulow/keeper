@@ -166,7 +166,7 @@ async fn main() -> Result<()> {
                         loop {
                             let res = report_output(&cfg, ReportOutputBody {
                                 id: id.clone(),
-                                record: o.clone(),
+                                record: o.to_record(),
                             }).await;
                             if let Err(e) = res {
                                 println!("ERROR: {:?}", e);

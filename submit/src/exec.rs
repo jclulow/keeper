@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 use std::os::unix::process::ExitStatusExt;
 use std::io::{Read, BufReader, BufRead};
 use std::ffi::OsStr;
-use std::time::SystemTime;
+use std::time::Instant;
 use anyhow::Result;
 
 fn spawn_reader<T>(tx: Sender<Activity>, name: &str, stream: Option<T>)
@@ -40,22 +40,16 @@ where
                 Ok(_) => {
                     let s = String::from_utf8_lossy(&buf);
 
-                    tx.send(Activity::Output(OutputRecord {
-                        msg: s.trim_end().to_string(),
-                        stream: name.to_string(),
-                        time: Utc::now().to_string(),
-                    })).unwrap();
+                    tx.send(Activity::msg(&name, s.trim_end())).unwrap();
                 }
                 Err(e) => {
                     /*
                      * Try to report whatever error we experienced to the
                      * server:
                      */
-                    tx.send(Activity::Output(OutputRecord {
-                        msg: format!("failed to read {}: {:?}", name, e),
-                        stream: "error".to_string(),
-                        time: Utc::now().to_string(),
-                    })).unwrap();
+                    tx.send(Activity::msg("error",
+                        &format!("failed to read {}: {:?}", name, e)))
+                        .unwrap();
                     return;
                 }
             }
@@ -69,20 +63,56 @@ pub struct ExitDetails {
     pub code: i32,
 }
 
+#[derive(Clone)]
+pub struct OutputDetails {
+    stream: String,
+    msg: String,
+    time: DateTime<Utc>,
+    instant: Instant,
+}
+
+impl OutputDetails {
+    pub fn to_record(&self) -> OutputRecord {
+        OutputRecord {
+            stream: self.stream.to_string(),
+            msg: self.msg.to_string(),
+            time: self.time.to_rfc3339_opts(SecondsFormat::Millis, true),
+        }
+    }
+}
+
 pub enum Activity {
-    Output(OutputRecord),
+    Output(OutputDetails),
     Exit(ExitDetails),
     Complete,
 }
 
 impl Activity {
-    fn exit(start: &SystemTime, end: &SystemTime, code: i32)
+    fn exit(start: &Instant, end: &Instant, code: i32)
         -> Activity
     {
         Activity::Exit(ExitDetails {
-            duration_ms: end.duration_since(*start).unwrap().as_millis() as u64,
+            duration_ms: end.duration_since(*start).as_millis() as u64,
             when: Utc::now(),
             code
+        })
+    }
+
+    fn msg(stream: &str, msg: &str) -> Activity {
+        Activity::Output(OutputDetails {
+            stream: stream.to_string(),
+            msg: msg.to_string(),
+            time: Utc::now(),
+            instant: Instant::now(),
+        })
+    }
+
+    fn err(msg: &str) -> Activity {
+        Activity::Output(OutputDetails {
+            stream: "error".to_string(),
+            msg: msg.to_string(),
+            time: Utc::now(),
+            instant: Instant::now(),
         })
     }
 }
@@ -102,7 +132,7 @@ pub fn run<S: AsRef<OsStr>>(args: &[S]) -> Result<Receiver<Activity>> {
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let start = SystemTime::now();
+    let start = Instant::now();
     let mut child = cmd.spawn()?;
 
     let readout = spawn_reader(tx.clone(), "stdout", child.stdout.take());
@@ -117,23 +147,18 @@ pub fn run<S: AsRef<OsStr>>(args: &[S]) -> Result<Receiver<Activity>> {
         }
 
         let wait = child.wait();
-        let end = SystemTime::now();
+        let end = Instant::now();
         match wait {
             Err(e) => {
-                tx.send(Activity::Output(OutputRecord {
-                    msg: format!("child wait error: {:?}", e),
-                    stream: "error".to_string(),
-                    time: Utc::now().to_string(),
-                })).unwrap();
+                tx.send(Activity::err(&format!("child wait error: {:?}", e)))
+                    .unwrap();
                 tx.send(Activity::exit(&start, &end, std::i32::MAX)).unwrap();
             }
             Ok(es) => {
                 if let Some(sig) = es.signal() {
-                    tx.send(Activity::Output(OutputRecord {
-                        msg: format!("child terminated by signal {}", sig),
-                        stream: "error".to_string(),
-                        time: Utc::now().to_string(),
-                    })).unwrap();
+                    tx.send(Activity::err(
+                        &format!("child terminated by signal {}", sig)))
+                        .unwrap();
                 }
                 let code = if let Some(code) = es.code() {
                     code
