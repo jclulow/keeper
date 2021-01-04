@@ -580,16 +580,12 @@ async fn main() -> Result<()> {
             .create_new(true)
             .write(true)
             .open(&s)?;
-        api.print_openapi(&mut f,
-            &"Keeper API".to_string(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            &"1.0".to_string())?;
+        api.openapi("Keeper API", "1.0")
+            .description("report execution of cron jobs through a \
+                mechanism other than mail")
+            .contact_name("Joshua M. Clulow")
+            .contact_url("https://github.com/jclulow/keeper")
+            .write(&mut f)?;
         return Ok(());
     }
 
@@ -615,6 +611,7 @@ async fn main() -> Result<()> {
 
     let cfgds = ConfigDropshot {
         bind_address: bind.parse()?,
+        ..Default::default()
     };
 
     let mut server = HttpServer::new(&cfgds, api, app, &log)?;
