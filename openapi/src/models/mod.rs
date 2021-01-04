@@ -1,5 +1,7 @@
 pub mod enrol_body;
 pub use self::enrol_body::EnrolBody;
+pub mod global_jobs_result;
+pub use self::global_jobs_result::GlobalJobsResult;
 pub mod output_record;
 pub use self::output_record::OutputRecord;
 pub mod report_finish_body;
@@ -12,3 +14,5 @@ pub mod report_result;
 pub use self::report_result::ReportResult;
 pub mod report_start_body;
 pub use self::report_start_body::ReportStartBody;
+pub mod report_summary;
+pub use self::report_summary::ReportSummary;

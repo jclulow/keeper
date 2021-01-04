@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use anyhow::{Result, bail, anyhow};
+use anyhow::{Result, bail, anyhow, Context};
 use getopts::Options;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
@@ -7,7 +7,8 @@ use std::result::Result as SResult;
 use std::sync::Arc;
 use std::io::{Write, BufWriter};
 use chrono::prelude::*;
-use slog::{debug, /*info, */ warn, error, Logger};
+#[allow(unused_imports)]
+use slog::{debug, info, warn, error, Logger};
 use std::any::Any;
 use keeper_common::*;
 
@@ -80,6 +81,39 @@ fn key_ok(k: &str) -> bool {
     k.chars().all(|c| { c.is_ascii_alphanumeric() }) && k.len() == 64
 }
 
+fn i64ton(v: i64) -> i32 {
+    if v < 0 {
+        0
+    } else if v > std::i32::MAX as i64 {
+        std::i32::MAX
+    } else {
+        v as i32
+    }
+}
+
+fn u64ton(v: u64) -> i32 {
+    if v > std::i32::MAX as u64 {
+        std::i32::MAX
+    } else {
+        v as i32
+    }
+}
+
+fn age_seconds(dt: &DateTime<Utc>) -> i32 {
+    let dur = Utc::now().signed_duration_since(*dt);
+    i64ton(dur.num_seconds())
+}
+
+#[derive(Serialize, JsonSchema)]
+struct ReportSummary {
+    host: String,
+    job: String,
+    when: DateTime<Utc>,
+    status: i32,
+    duration_seconds: i32,
+    age_seconds: i32,
+}
+
 impl App {
     fn from_private(ctx: Arc<dyn Any + Send + Sync + 'static>) -> Arc<App> {
         ctx.downcast::<App>().expect("app downcast")
@@ -87,6 +121,242 @@ impl App {
 
     fn from_request(rqctx: &Arc<RequestContext>) -> Arc<App> {
         Self::from_private(Arc::clone(&rqctx.server.private))
+    }
+
+    fn summary(&self, perjob: usize) -> Result<Vec<ReportSummary>> {
+        let mut out = Vec::new();
+
+        for host in self.report_hosts()?.iter() {
+            'job: for job in self.report_host_jobs(host)?.iter() {
+                let mut c = 0usize;
+                for y in self.report_hj_years(host, job)?.iter() {
+                    if c >= perjob {
+                        continue 'job;
+                    }
+
+                    for m in self.list_months(host, job, *y)?.iter() {
+                        if c >= perjob {
+                            continue 'job;
+                        }
+
+                        for d in self.list_days(host, job, *y, *m)?.iter() {
+                            if c >= perjob {
+                                continue 'job;
+                            }
+
+                            for r in
+                                self.list_reports(host, job, *y, *m, *d)?.iter()
+                            {
+                                if c >= perjob {
+                                    continue 'job;
+                                }
+
+                                let dt = Utc.timestamp_millis(*r);
+                                let t = self.reportpath(host, job, &dt)?;
+
+                                if let Ok(Some(p)) = load_file::<PostFile>(&t) {
+                                    if p.sealed {
+                                        let dur = p.duration_seconds();
+
+                                        out.push(ReportSummary {
+                                            host: host.to_string(),
+                                            job: job.to_string(),
+                                            age_seconds: age_seconds(&dt),
+                                            duration_seconds: dur,
+                                            when: dt,
+                                            status: p.status.unwrap(),
+                                        });
+                                        c += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(out)
+    }
+
+    fn list_reports(&self, host: &str, job: &str, year: u32, month: u32,
+        day: u32)
+        -> Result<Vec<i64>>
+    {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+        targ.push(host);
+        targ.push(job);
+        targ.push(&format!("{:04}", year));
+        targ.push(&format!("{:02}", month));
+        targ.push(&format!("{:02}", day));
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report reports")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_file() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                if !n.ends_with(".json") {
+                    continue;
+                }
+
+                if let Ok(num) = n.trim_end_matches(".json").parse::<i64>() {
+                    if !out.contains(&num) {
+                        out.push(num);
+                    }
+                }
+            }
+        }
+
+        out.sort();
+        out.reverse();
+        Ok(out)
+    }
+
+    fn list_days(&self, host: &str, job: &str, year: u32, month: u32)
+        -> Result<Vec<u32>>
+    {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+        targ.push(host);
+        targ.push(job);
+        targ.push(&format!("{:04}", year));
+        targ.push(&format!("{:02}", month));
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report days")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_dir() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                if let Ok(num) = n.parse::<u32>() {
+                    if !out.contains(&num) {
+                        out.push(num);
+                    }
+                }
+            }
+        }
+
+        out.sort();
+        out.reverse();
+        Ok(out)
+    }
+
+    fn list_months(&self, host: &str, job: &str, year: u32)
+        -> Result<Vec<u32>>
+    {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+        targ.push(host);
+        targ.push(job);
+        targ.push(&format!("{:04}", year));
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report months")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_dir() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                if let Ok(num) = n.parse::<u32>() {
+                    if !out.contains(&num) {
+                        out.push(num);
+                    }
+                }
+            }
+        }
+
+        out.sort();
+        out.reverse();
+        Ok(out)
+    }
+
+    fn report_hj_years(&self, host: &str, job: &str) -> Result<Vec<u32>> {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+        targ.push(host);
+        targ.push(job);
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report years")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_dir() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                if let Ok(num) = n.parse::<u32>() {
+                    if !out.contains(&num) {
+                        out.push(num);
+                    }
+                }
+            }
+        }
+
+        out.sort();
+        out.reverse();
+        Ok(out)
+    }
+
+    fn report_host_jobs(&self, host: &str) -> Result<Vec<String>> {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+        targ.push(host);
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report jobs")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_dir() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                /*
+                 * NB: directory entry names should be unique, so we don't check
+                 * here.
+                 */
+                out.push(n.to_string());
+            }
+        }
+
+        out.sort();
+        Ok(out)
+    }
+
+    fn report_hosts(&self) -> Result<Vec<String>> {
+        let mut targ = self.dir.clone();
+        targ.push("reports");
+
+        let mut out = Vec::new();
+
+        let mut dir = std::fs::read_dir(&targ).context("report hosts")?;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_dir() {
+                continue;
+            }
+
+            if let Some(n) = ent.file_name().to_str() {
+                /*
+                 * NB: directory entry names should be unique, so we don't check
+                 * here.
+                 */
+                out.push(n.to_string());
+            }
+        }
+
+        out.sort();
+        Ok(out)
     }
 
     fn reportpath(&self, host: &str, job: &str, time: &DateTime<Utc>)
@@ -125,23 +395,30 @@ impl App {
         Ok(kpath)
     }
 
-    fn check_key(&self, host: &str, key: &str) -> Result<bool> {
+    fn check_key(&self, host: &str, key: &str) -> Result<Option<Auth>> {
         if !name_ok(host) {
-            return Ok(false);
+            return Ok(None);
         }
         let kpath = self.keypath("keys", host)?;
 
         let kf: KeyFile = if let Some(kf) = load_file(&kpath)? {
             kf
         } else {
-            return Ok(false);
+            return Ok(None);
         };
 
         if host != &kf.host {
             bail!("key file {} has wrong host {}", kpath.display(), kf.host);
         }
 
-        Ok(key == &kf.key)
+        Ok(if key == &kf.key {
+            Some(Auth {
+                host: kf.host.to_string(),
+                global_view: kf.global_view,
+            })
+        } else {
+            None
+        })
     }
 
     fn enrol_key(&self, host: &str, key: &str) -> Result<bool> {
@@ -219,14 +496,25 @@ struct PostFile {
     sealed: bool,
 }
 
+impl PostFile {
+    fn duration_seconds(&self) -> i32 {
+        u64ton(self.duration.unwrap() / 1000)
+    }
+}
+
+struct Auth {
+    host: String,
+    global_view: bool,
+}
+
 trait RequestBodyExt {
     fn require_auth(&self, app: &App)
-        -> SResult<String, HttpError>;
+        -> SResult<Auth, HttpError>;
 }
 
 impl RequestBodyExt for hyper::Request<hyper::Body> {
     fn require_auth(&self, app: &App)
-        -> SResult<String, HttpError>
+        -> SResult<Auth, HttpError>
     {
         let v = if let Some(h) = self.headers().get(AUTHORIZATION) {
             if let Ok(v) = h.to_str() {
@@ -243,11 +531,8 @@ impl RequestBodyExt for hyper::Request<hyper::Body> {
 
             if t.len() == 2 && t.iter().all(|s| !s.is_empty()) {
                 match app.check_key(t[0], t[1]) {
-                    Ok(ok) => {
-                        if ok {
-                            return Ok(t[0].to_string());
-                        }
-                    }
+                    Ok(Some(auth)) => return Ok(auth),
+                    Ok(None) => (),
                     Err(e) => {
                         let msg = format!("internal error: {:?}", e);
                         return Err(HttpError::for_internal_error(msg));
@@ -329,8 +614,8 @@ async fn report_start(
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
-    let host = arc.request.lock().await.require_auth(&app)?;
-    if body.id.host != host {
+    let auth = arc.request.lock().await.require_auth(&app)?;
+    if body.id.host != auth.host {
         return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
             "uh uh uh".into()));
     }
@@ -418,8 +703,8 @@ async fn report_output(
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
-    let host = arc.request.lock().await.require_auth(&app)?;
-    if body.id.host != host {
+    let auth = arc.request.lock().await.require_auth(&app)?;
+    if body.id.host != auth.host {
         return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
             "uh uh uh".into()));
     }
@@ -462,7 +747,6 @@ async fn report_output(
                     }))
                 } else {
                     f.output.push(body.record);
-                    f.output.sort_by_key(|o| o.time);
 
                     if let Err(e) = store_file(&targ, &f, false) {
                         Err(HttpError::for_internal_error(
@@ -512,8 +796,8 @@ async fn report_finish(
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
-    let host = arc.request.lock().await.require_auth(&app)?;
-    if body.id.host != host {
+    let auth = arc.request.lock().await.require_auth(&app)?;
+    if body.id.host != auth.host {
         return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
             "uh uh uh".into()));
     }
@@ -576,6 +860,35 @@ async fn report_finish(
     }
 }
 
+#[derive(Serialize, JsonSchema)]
+struct GlobalJobsResult {
+    summary: Vec<ReportSummary>,
+}
+
+#[endpoint {
+    method = GET,
+    path = "/global/jobs",
+}]
+async fn global_jobs(
+    arc: Arc<RequestContext>,
+) -> SResult<HttpResponseCreated<GlobalJobsResult>, HttpError>
+{
+    let app = App::from_request(&arc);
+
+    let auth = arc.request.lock().await.require_auth(&app)?;
+    if !auth.global_view {
+        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
+            "uh uh uh".into()));
+    }
+
+    let summary = app.summary(1).or_500()?;
+
+    Ok(HttpResponseCreated(GlobalJobsResult {
+        summary,
+    }))
+}
+
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut opts = Options::new();
@@ -598,6 +911,7 @@ async fn main() -> Result<()> {
     api.register(report_start).unwrap();
     api.register(report_output).unwrap();
     api.register(report_finish).unwrap();
+    api.register(global_jobs).unwrap();
 
     if let Some(s) = p.opt_str("S") {
         let mut f = std::fs::OpenOptions::new()

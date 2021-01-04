@@ -26,6 +26,7 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**enrol**](docs/DefaultApi.md#enrol) | **post** /enrol | 
+*DefaultApi* | [**global_jobs**](docs/DefaultApi.md#global_jobs) | **get** /global/jobs | 
 *DefaultApi* | [**report_finish**](docs/DefaultApi.md#report_finish) | **post** /report/finish | 
 *DefaultApi* | [**report_output**](docs/DefaultApi.md#report_output) | **post** /report/output | 
 *DefaultApi* | [**report_start**](docs/DefaultApi.md#report_start) | **post** /report/start | 
@@ -34,12 +35,14 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [EnrolBody](docs/EnrolBody.md)
+ - [GlobalJobsResult](docs/GlobalJobsResult.md)
  - [OutputRecord](docs/OutputRecord.md)
  - [ReportFinishBody](docs/ReportFinishBody.md)
  - [ReportId](docs/ReportId.md)
  - [ReportOutputBody](docs/ReportOutputBody.md)
  - [ReportResult](docs/ReportResult.md)
  - [ReportStartBody](docs/ReportStartBody.md)
+ - [ReportSummary](docs/ReportSummary.md)
 
 
 To get access to the crate's generated documentation, use:
