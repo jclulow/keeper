@@ -57,6 +57,8 @@ struct KeyFile {
     host: String,
     key: String,
     time_create: DateTime<Utc>,
+    #[serde(default)]
+    global_view: bool,
 }
 
 /**
@@ -68,6 +70,14 @@ fn name_ok(n: &str) -> bool {
     n.chars().all(|c| {
         c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-'
     }) && n.len() >= 2
+}
+
+/**
+ * Clients submit their own key during enrolment, and it will be included in
+ * "Authorization" headers later.  Make sure the format is at least plausible.
+ */
+fn key_ok(k: &str) -> bool {
+    k.chars().all(|c| { c.is_ascii_alphanumeric() }) && k.len() == 64
 }
 
 impl App {
@@ -135,7 +145,7 @@ impl App {
     }
 
     fn enrol_key(&self, host: &str, key: &str) -> Result<bool> {
-        if !name_ok(host) {
+        if !name_ok(host) || !key_ok(key) {
             return Ok(false);
         }
 
@@ -155,6 +165,14 @@ impl App {
 
         let kpath = self.keypath("enrol", host)?;
 
+        let mut buf = serde_json::to_vec_pretty(&KeyFile {
+            host: host.to_string(),
+            key: key.to_string(),
+            time_create: Utc::now(),
+            global_view: false,
+        })?;
+        buf.push(b'\n');
+
         let fres = std::fs::OpenOptions::new()
             .create_new(true)
             .write(true)
@@ -172,11 +190,7 @@ impl App {
             Err(e) => bail!("enrol key failure: {:?}", e),
         };
         let mut bw = BufWriter::new(f);
-        serde_json::to_writer_pretty(&mut bw, &KeyFile {
-            host: host.to_string(),
-            key: key.to_string(),
-            time_create: Utc::now(),
-        })?;
+        bw.write_all(&mut buf)?;
         bw.flush()?;
         Ok(true)
     }
@@ -226,6 +240,7 @@ impl RequestBodyExt for hyper::Request<hyper::Body> {
 
         if let Some(v) = v {
             let t = v.split_whitespace().map(|s| s.trim()).collect::<Vec<_>>();
+
             if t.len() == 2 && t.iter().all(|s| !s.is_empty()) {
                 match app.check_key(t[0], t[1]) {
                     Ok(ok) => {
@@ -264,11 +279,20 @@ async fn enrol(
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
+    if !key_ok(&body.key) {
+        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
+            "invalid key format".into()));
+    }
+    if !name_ok(&body.host) {
+        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
+            "invalid name format".into()));
+    }
+
     if app.enrol_key(&body.host, &body.key).or_500()? {
         Ok(HttpResponseCreated(()))
     } else {
         Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "invalid hostname".into()))
+            "invalid enrolment request".into()))
     }
 }
 
