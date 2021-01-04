@@ -8,8 +8,8 @@ mkdir -p "$root/cache"
 
 sf="$root/cache/openapi.json"
 
-ver="5.0.0-beta3"
-sha256="6d963b987437fd9d59101142d0e6e18fd3db6bbc0f2dbde9e09a70376a6b68b8"
+ver="5.0.0"
+sha256="839fade01e54ce1eecf012b8c33adb1413cff0cf2e76e23bc8d7673f09626f8e"
 base="https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli"
 url="$base/$ver/openapi-generator-cli-$ver.jar"
 jar="$root/cache/openapi-generator-cli-$ver.jar"
@@ -18,6 +18,7 @@ while :; do
 	if [[ -f "$jar" ]]; then
 		actual=$(digest -a sha256 "$jar")
 		if [[ $actual != $sha256 ]]; then
+			printf 'actual %s != expected %s\n' "$actual" "$sha256"
 			rm -f "$jar"
 		else
 			break
