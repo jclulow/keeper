@@ -12,7 +12,7 @@ use std::any::Any;
 #[allow(unused_imports)]
 use keeper_common::*;
 use tokio::sync::RwLock;
-use hyper::{Request, Body};
+use hyper::{Response, Request, Body};
 
 use dropshot::{
     ConfigLogging,
@@ -30,6 +30,8 @@ use hyper::{StatusCode, header::AUTHORIZATION};
 
 mod store;
 use store::*;
+mod prometheus;
+use prometheus::*;
 
 trait MakeInternalError<T> {
     fn or_500(self) -> SResult<T, HttpError>;
@@ -455,6 +457,48 @@ async fn global_jobs(
     }))
 }
 
+#[endpoint {
+    method = GET,
+    path = "/global/metrics",
+}]
+async fn global_metrics(
+    arc: Arc<RequestContext>,
+) -> SResult<Response<Body>, HttpError>
+{
+    let app = App::from_request(&arc);
+
+    let req = arc.request.lock().await;
+    let auth = app.require_auth(&req).await?;
+    if !auth.global_view {
+        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
+            "uh uh uh".into()));
+    }
+
+    let reports = app.reports.read().await;
+
+    let mut e = Emitter::new();
+    e.define("keeper_job_age_seconds", "gauge",
+        "age of this job report");
+    e.define("keeper_job_ok", "gauge",
+        "did the last run of this job exit 0?");
+    e.define("keeper_job_duration_seconds", "gauge",
+        "for how long did the last job run?");
+
+    for j in reports.summary(1).or_500()?.iter() {
+        e.emit_i32("keeper_job_age_seconds", &j.host, &j.job,
+            j.age_seconds);
+        e.emit_i32("keeper_job_duration_seconds", &j.host, &j.job,
+            j.duration_seconds);
+        e.emit_i32("keeper_job_ok", &j.host, &j.job,
+            (j.status == 0) as i32);
+    }
+
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/plain")
+        .body(Body::from(e.out().to_string()))?)
+}
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -493,6 +537,13 @@ async fn main() -> Result<()> {
             .write(&mut f)?;
         return Ok(());
     }
+
+    /*
+     * Add some additional handlers that we do not wish to appear in the OpenAPI
+     * definition document.  These must be added _after_ any rendering of the
+     * definition, but before the server is stood up.
+     */
+    api.register(global_metrics).unwrap();
 
     let bind = p.opt_str("b").unwrap_or_else(|| String::from("0.0.0.0:9978"));
     let dir = if let Some(d) = p.opt_str("d") {
