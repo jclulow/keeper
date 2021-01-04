@@ -122,6 +122,44 @@ async fn main() -> Result<()> {
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
         }
+        "ping" => {
+            let cfg = configure(cf.as_ref())?;
+            let cf = cf.unwrap();
+            let mut authfail_report = false;
+
+            loop {
+                let res = ping(&cfg).await;
+
+                match res {
+                    Ok(p) => {
+                        if p.host != cf.host {
+                            bail!("remote host {} != local host {}", p.host,
+                                cf.host);
+                        }
+                        println!("ok, host \"{}\"", p.host);
+                        return Ok(());
+                    }
+                    Err(Error::ResponseError(e)) => {
+                        let status = e.status.as_u16();
+                        if status == 403 || status == 401 {
+                            if !authfail_report {
+                                eprintln!("auth failure; waiting for approval");
+                                authfail_report = true;
+                            }
+                        } else if status >= 400 && status <= 499 {
+                            bail!("request error; giving up: {:?}", e);
+                        } else {
+                            eprintln!("request error; retrying: {:?}", e);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("other error; retrying: {:?}", e);
+                    }
+                }
+
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        }
         "exec" => {
             let cfg = configure(cf.as_ref())?;
             let cf = cf.unwrap();
