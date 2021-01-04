@@ -71,9 +71,10 @@ impl App {
         Self::from_private(Arc::clone(&rqctx.server.private))
     }
 
-    async fn require_auth(&self, req: &Request<Body>)
-        -> SResult<Auth, HttpError>
-    {
+    async fn require_auth(
+        &self,
+        req: &Request<Body>,
+    ) -> SResult<Auth, HttpError> {
         let v = if let Some(h) = req.headers().get(AUTHORIZATION) {
             if let Ok(v) = h.to_str() {
                 Some(v.to_string())
@@ -103,8 +104,11 @@ impl App {
             }
         }
 
-        Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "invalid Authorization header".into()))
+        Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "invalid Authorization header".into(),
+        ))
     }
 }
 
@@ -120,27 +124,35 @@ struct EnrolBody {
 }]
 async fn enrol(
     arc: Arc<RequestContext>,
-    body: TypedBody<EnrolBody>)
-    -> SResult<HttpResponseCreated<()>, HttpError>
-{
+    body: TypedBody<EnrolBody>,
+) -> SResult<HttpResponseCreated<()>, HttpError> {
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
     if !key_ok(&body.key) {
-        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "invalid key format".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "invalid key format".into(),
+        ));
     }
     if !name_ok(&body.host) {
-        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "invalid name format".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "invalid name format".into(),
+        ));
     }
 
     let keys = app.keys.write().await;
     if keys.enrol_key(&body.host, &body.key).or_500()? {
         Ok(HttpResponseCreated(()))
     } else {
-        Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "invalid enrolment request".into()))
+        Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "invalid enrolment request".into(),
+        ))
     }
 }
 
@@ -171,22 +183,27 @@ struct ReportResult {
 }]
 async fn report_start(
     arc: Arc<RequestContext>,
-    body: TypedBody<ReportStartBody>)
-    -> SResult<HttpResponseCreated<ReportResult>, HttpError>
-{
+    body: TypedBody<ReportStartBody>,
+) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
     if body.id.host != auth.host {
-        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "uh uh uh".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "uh uh uh".into(),
+        ));
     }
 
     if !name_ok(&body.id.job) {
-        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "job name too short".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "job name too short".into(),
+        ));
     }
     /*
      * XXX check that job time is in the last fornight, or whatever
@@ -201,13 +218,17 @@ async fn report_start(
              * can return success, but if not we should return a conflict.
              */
             if body.id.uuid != f.report_uuid {
-                Err(HttpError::for_client_error(None,
+                Err(HttpError::for_client_error(
+                    None,
                     StatusCode::CONFLICT,
-                    "this time already submitted, with different UUID".into()))
+                    "this time already submitted, with different UUID".into(),
+                ))
             } else if f.sealed {
-                Err(HttpError::for_client_error(None,
+                Err(HttpError::for_client_error(
+                    None,
                     StatusCode::CONFLICT,
-                    "this job is already complete".into()))
+                    "this job is already complete".into(),
+                ))
             } else {
                 Ok(HttpResponseCreated(ReportResult {
                     existed_already: true,
@@ -231,11 +252,13 @@ async fn report_start(
                 output: Vec::new(),
                 script: body.script,
             };
-            if let Err(e) = reports.store(&body.id.host, &body.id.job,
-                &body.id.time, &pf)
+            if let Err(e) =
+                reports.store(&body.id.host, &body.id.job, &body.id.time, &pf)
             {
-                Err(HttpError::for_internal_error(
-                    format!("store file? {:?}", e)))
+                Err(HttpError::for_internal_error(format!(
+                    "store file? {:?}",
+                    e
+                )))
             } else {
                 Ok(HttpResponseCreated(ReportResult {
                     existed_already: false,
@@ -261,22 +284,27 @@ struct ReportOutputBody {
 }]
 async fn report_output(
     arc: Arc<RequestContext>,
-    body: TypedBody<ReportOutputBody>)
-    -> SResult<HttpResponseCreated<ReportResult>, HttpError>
-{
+    body: TypedBody<ReportOutputBody>,
+) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
     if body.id.host != auth.host {
-        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "uh uh uh".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "uh uh uh".into(),
+        ));
     }
 
     if !name_ok(&body.id.job) {
-        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "job name too short".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "job name too short".into(),
+        ));
     }
 
     /*
@@ -292,13 +320,17 @@ async fn report_output(
              * can return success, but if not we should return a conflict.
              */
             if body.id.uuid != f.report_uuid {
-                Err(HttpError::for_client_error(None,
+                Err(HttpError::for_client_error(
+                    None,
                     StatusCode::CONFLICT,
-                    "this time already submitted, with different UUID".into()))
+                    "this time already submitted, with different UUID".into(),
+                ))
             } else if f.sealed {
-                Err(HttpError::for_client_error(None,
+                Err(HttpError::for_client_error(
+                    None,
                     StatusCode::CONFLICT,
-                    "this job is already complete".into()))
+                    "this job is already complete".into(),
+                ))
             } else {
                 /*
                  * This job exists and the UUID matches the one recorded when
@@ -312,11 +344,16 @@ async fn report_output(
                 } else {
                     f.output.push(body.record);
 
-                    if let Err(e) = reports.store(&body.id.host,
-                        &body.id.job, &body.id.time, &f)
-                    {
-                        Err(HttpError::for_internal_error(
-                            format!("store file? {:?}", e)))
+                    if let Err(e) = reports.store(
+                        &body.id.host,
+                        &body.id.job,
+                        &body.id.time,
+                        &f,
+                    ) {
+                        Err(HttpError::for_internal_error(format!(
+                            "store file? {:?}",
+                            e
+                        )))
                     } else {
                         Ok(HttpResponseCreated(ReportResult {
                             existed_already: false,
@@ -330,9 +367,11 @@ async fn report_output(
              * If the job file does not exist already, we cannot append an
              * output record to it.
              */
-            Err(HttpError::for_client_error(None,
+            Err(HttpError::for_client_error(
+                None,
                 StatusCode::BAD_REQUEST,
-                "this job does not exist".into()))
+                "this job does not exist".into(),
+            ))
         }
         Err(e) => {
             error!(arc.log, "load file error: {:?}", e);
@@ -356,22 +395,27 @@ struct ReportFinishBody {
 }]
 async fn report_finish(
     arc: Arc<RequestContext>,
-    body: TypedBody<ReportFinishBody>)
-    -> SResult<HttpResponseCreated<ReportResult>, HttpError>
-{
+    body: TypedBody<ReportFinishBody>,
+) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let body = body.into_inner();
     let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
     if body.id.host != auth.host {
-        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "uh uh uh".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "uh uh uh".into(),
+        ));
     }
 
     if !name_ok(&body.id.job) {
-        return Err(HttpError::for_client_error(None, StatusCode::BAD_REQUEST,
-            "job name too short".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::BAD_REQUEST,
+            "job name too short".into(),
+        ));
     }
 
     /*
@@ -386,9 +430,11 @@ async fn report_finish(
              * can return success, but if not we should return a conflict.
              */
             if body.id.uuid != f.report_uuid {
-                Err(HttpError::for_client_error(None,
+                Err(HttpError::for_client_error(
+                    None,
                     StatusCode::CONFLICT,
-                    "this time already submitted, with different UUID".into()))
+                    "this time already submitted, with different UUID".into(),
+                ))
             } else if f.sealed {
                 Ok(HttpResponseCreated(ReportResult {
                     existed_already: true,
@@ -399,11 +445,16 @@ async fn report_finish(
                 f.status = Some(body.exit_status);
                 f.sealed = true;
 
-                if let Err(e) = reports.store(&body.id.host, &body.id.job,
-                    &body.id.time, &f)
-                {
-                    Err(HttpError::for_internal_error(
-                        format!("store file? {:?}", e)))
+                if let Err(e) = reports.store(
+                    &body.id.host,
+                    &body.id.job,
+                    &body.id.time,
+                    &f,
+                ) {
+                    Err(HttpError::for_internal_error(format!(
+                        "store file? {:?}",
+                        e
+                    )))
                 } else {
                     Ok(HttpResponseCreated(ReportResult {
                         existed_already: false,
@@ -416,9 +467,11 @@ async fn report_finish(
              * If the job file does not exist already, we cannot append an
              * output record to it.
              */
-            Err(HttpError::for_client_error(None,
+            Err(HttpError::for_client_error(
+                None,
                 StatusCode::BAD_REQUEST,
-                "this job does not exist".into()))
+                "this job does not exist".into(),
+            ))
         }
         Err(e) => {
             error!(arc.log, "load file error: {:?}", e);
@@ -438,23 +491,23 @@ struct GlobalJobsResult {
 }]
 async fn global_jobs(
     arc: Arc<RequestContext>,
-) -> SResult<HttpResponseCreated<GlobalJobsResult>, HttpError>
-{
+) -> SResult<HttpResponseCreated<GlobalJobsResult>, HttpError> {
     let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
     if !auth.global_view {
-        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "uh uh uh".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "uh uh uh".into(),
+        ));
     }
 
     let reports = app.reports.read().await;
     let summary = reports.summary(1).or_500()?;
 
-    Ok(HttpResponseCreated(GlobalJobsResult {
-        summary,
-    }))
+    Ok(HttpResponseCreated(GlobalJobsResult { summary }))
 }
 
 #[endpoint {
@@ -463,34 +516,43 @@ async fn global_jobs(
 }]
 async fn global_metrics(
     arc: Arc<RequestContext>,
-) -> SResult<Response<Body>, HttpError>
-{
+) -> SResult<Response<Body>, HttpError> {
     let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
     if !auth.global_view {
-        return Err(HttpError::for_client_error(None, StatusCode::UNAUTHORIZED,
-            "uh uh uh".into()));
+        return Err(HttpError::for_client_error(
+            None,
+            StatusCode::UNAUTHORIZED,
+            "uh uh uh".into(),
+        ));
     }
 
     let reports = app.reports.read().await;
 
     let mut e = Emitter::new();
-    e.define("keeper_job_age_seconds", "gauge",
-        "age of this job report");
-    e.define("keeper_job_ok", "gauge",
-        "did the last run of this job exit 0?");
-    e.define("keeper_job_duration_seconds", "gauge",
-        "for how long did the last job run?");
+    e.define("keeper_job_age_seconds", "gauge", "age of this job report");
+    e.define(
+        "keeper_job_ok",
+        "gauge",
+        "did the last run of this job exit 0?",
+    );
+    e.define(
+        "keeper_job_duration_seconds",
+        "gauge",
+        "for how long did the last job run?",
+    );
 
     for j in reports.summary(1).or_500()?.iter() {
-        e.emit_i32("keeper_job_age_seconds", &j.host, &j.job,
-            j.age_seconds);
-        e.emit_i32("keeper_job_duration_seconds", &j.host, &j.job,
-            j.duration_seconds);
-        e.emit_i32("keeper_job_ok", &j.host, &j.job,
-            (j.status == 0) as i32);
+        e.emit_i32("keeper_job_age_seconds", &j.host, &j.job, j.age_seconds);
+        e.emit_i32(
+            "keeper_job_duration_seconds",
+            &j.host,
+            &j.job,
+            j.duration_seconds,
+        );
+        e.emit_i32("keeper_job_ok", &j.host, &j.job, (j.status == 0) as i32);
     }
 
     Ok(Response::builder()
@@ -498,7 +560,6 @@ async fn global_metrics(
         .header("content-type", "text/plain")
         .body(Body::from(e.out().to_string()))?)
 }
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -530,8 +591,10 @@ async fn main() -> Result<()> {
             .write(true)
             .open(&s)?;
         api.openapi("Keeper API", "1.0")
-            .description("report execution of cron jobs through a \
-                mechanism other than mail")
+            .description(
+                "report execution of cron jobs through a \
+                mechanism other than mail",
+            )
             .contact_name("Joshua M. Clulow")
             .contact_url("https://github.com/jclulow/keeper")
             .write(&mut f)?;
@@ -545,7 +608,9 @@ async fn main() -> Result<()> {
      */
     api.register(global_metrics).unwrap();
 
-    let bind = p.opt_str("b").unwrap_or_else(|| String::from("0.0.0.0:9978"));
+    let bind = p
+        .opt_str("b")
+        .unwrap_or_else(|| String::from("0.0.0.0:9978"));
     let dir = if let Some(d) = p.opt_str("d") {
         PathBuf::from(d)
     } else {
@@ -579,7 +644,9 @@ async fn main() -> Result<()> {
 
     let mut server = HttpServer::new(&cfgds, api, app, &log)?;
     let task = server.run();
-    server.wait_for_shutdown(task).await
+    server
+        .wait_for_shutdown(task)
+        .await
         .map_err(|e| anyhow!("server task failure: {:?}", e))?;
     bail!("early exit is unexpected");
 }

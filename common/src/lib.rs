@@ -7,9 +7,9 @@ use anyhow::{Result, bail};
 use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
 
-pub fn load_file<T>(p: &Path)
-    -> Result<Option<T>>
-    where for<'de> T: Deserialize<'de>,
+pub fn load_file<T>(p: &Path) -> Result<Option<T>>
+where
+    for<'de> T: Deserialize<'de>,
 {
     let f = match File::open(p) {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
@@ -22,9 +22,9 @@ pub fn load_file<T>(p: &Path)
     Ok(serde_json::from_slice(buf.as_slice())?)
 }
 
-pub fn store_file<T>(p: &Path, data: &T, private: bool)
-    -> Result<()>
-    where T: Serialize,
+pub fn store_file<T>(p: &Path, data: &T, private: bool) -> Result<()>
+where
+    T: Serialize,
 {
     let mut tmp = p.to_path_buf();
     let mut n = p.file_name().unwrap().to_os_string();

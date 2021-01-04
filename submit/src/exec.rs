@@ -8,8 +8,11 @@ use std::ffi::OsStr;
 use std::time::Instant;
 use anyhow::Result;
 
-fn spawn_reader<T>(tx: Sender<Activity>, name: &str, stream: Option<T>)
-    -> Option<std::thread::JoinHandle<()>>
+fn spawn_reader<T>(
+    tx: Sender<Activity>,
+    name: &str,
+    stream: Option<T>,
+) -> Option<std::thread::JoinHandle<()>>
 where
     T: Read + Send + 'static,
 {
@@ -47,9 +50,11 @@ where
                      * Try to report whatever error we experienced to the
                      * server:
                      */
-                    tx.send(Activity::msg("error",
-                        &format!("failed to read {}: {:?}", name, e)))
-                        .unwrap();
+                    tx.send(Activity::msg(
+                        "error",
+                        &format!("failed to read {}: {:?}", name, e),
+                    ))
+                    .unwrap();
                     return;
                 }
             }
@@ -88,13 +93,11 @@ pub enum Activity {
 }
 
 impl Activity {
-    fn exit(start: &Instant, end: &Instant, code: i32)
-        -> Activity
-    {
+    fn exit(start: &Instant, end: &Instant, code: i32) -> Activity {
         Activity::Exit(ExitDetails {
             duration_ms: end.duration_since(*start).as_millis() as u64,
             when: Utc::now(),
-            code
+            code,
         })
     }
 
@@ -152,13 +155,16 @@ pub fn run<S: AsRef<OsStr>>(args: &[S]) -> Result<Receiver<Activity>> {
             Err(e) => {
                 tx.send(Activity::err(&format!("child wait error: {:?}", e)))
                     .unwrap();
-                tx.send(Activity::exit(&start, &end, std::i32::MAX)).unwrap();
+                tx.send(Activity::exit(&start, &end, std::i32::MAX))
+                    .unwrap();
             }
             Ok(es) => {
                 if let Some(sig) = es.signal() {
-                    tx.send(Activity::err(
-                        &format!("child terminated by signal {}", sig)))
-                        .unwrap();
+                    tx.send(Activity::err(&format!(
+                        "child terminated by signal {}",
+                        sig
+                    )))
+                    .unwrap();
                 }
                 let code = if let Some(code) = es.code() {
                     code

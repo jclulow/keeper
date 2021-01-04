@@ -42,19 +42,29 @@ impl Emitter {
         self.printed.insert(stat_name.to_string());
     }
 
-    pub fn emit_i64(&mut self, stat_name: &str, host: &str, job: &str,
-        val: i64)
-    {
+    pub fn emit_i64(
+        &mut self,
+        stat_name: &str,
+        host: &str,
+        job: &str,
+        val: i64,
+    ) {
         self.emit_header(stat_name);
 
         let es = self.typedefs.get(stat_name).unwrap();
-        self.out += &format!("{}{{host=\"{}\",name=\"{}\"}}\t{}\n",
-            es.name, host, job, val);
+        self.out += &format!(
+            "{}{{host=\"{}\",name=\"{}\"}}\t{}\n",
+            es.name, host, job, val
+        );
     }
 
-    pub fn emit_i32(&mut self, stat_name: &str, host: &str, job: &str,
-        val: i32)
-    {
+    pub fn emit_i32(
+        &mut self,
+        stat_name: &str,
+        host: &str,
+        job: &str,
+        val: i32,
+    ) {
         self.emit_i64(stat_name, host, job, val as i64);
     }
 

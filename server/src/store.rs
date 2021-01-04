@@ -33,7 +33,7 @@ pub fn name_ok(n: &str) -> bool {
  * "Authorization" headers later.  Make sure the format is at least plausible.
  */
 pub fn key_ok(k: &str) -> bool {
-    k.chars().all(|c| { c.is_ascii_alphanumeric() }) && k.len() == 64
+    k.chars().all(|c| c.is_ascii_alphanumeric()) && k.len() == 64
 }
 
 fn i64ton(v: i64) -> i32 {
@@ -82,10 +82,14 @@ impl ReportStore {
         })
     }
 
-    fn list_reports(&self, host: &str, job: &str, year: u32, month: u32,
-        day: u32)
-        -> Result<Vec<i64>>
-    {
+    fn list_reports(
+        &self,
+        host: &str,
+        job: &str,
+        year: u32,
+        month: u32,
+        day: u32,
+    ) -> Result<Vec<i64>> {
         let mut targ = self.dir.clone();
         targ.push("reports");
         targ.push(host);
@@ -120,9 +124,13 @@ impl ReportStore {
         Ok(out)
     }
 
-    fn list_days(&self, host: &str, job: &str, year: u32, month: u32)
-        -> Result<Vec<u32>>
-    {
+    fn list_days(
+        &self,
+        host: &str,
+        job: &str,
+        year: u32,
+        month: u32,
+    ) -> Result<Vec<u32>> {
         let mut targ = self.dir.clone();
         targ.push("reports");
         targ.push(host);
@@ -152,9 +160,12 @@ impl ReportStore {
         Ok(out)
     }
 
-    fn list_months(&self, host: &str, job: &str, year: u32)
-        -> Result<Vec<u32>>
-    {
+    fn list_months(
+        &self,
+        host: &str,
+        job: &str,
+        year: u32,
+    ) -> Result<Vec<u32>> {
         let mut targ = self.dir.clone();
         targ.push("reports");
         targ.push(host);
@@ -262,9 +273,12 @@ impl ReportStore {
         Ok(out)
     }
 
-    fn reportpath(&self, host: &str, job: &str, time: &DateTime<Utc>)
-        -> Result<PathBuf>
-    {
+    fn reportpath(
+        &self,
+        host: &str,
+        job: &str,
+        time: &DateTime<Utc>,
+    ) -> Result<PathBuf> {
         if !name_ok(host) || !name_ok(job) {
             bail!("invalid host or job name");
         }
@@ -341,17 +355,23 @@ impl ReportStore {
         Ok(out)
     }
 
-    pub fn load(&self, host: &str, job: &str, time: &DateTime<Utc>)
-        -> Result<Option<PostFile>>
-    {
+    pub fn load(
+        &self,
+        host: &str,
+        job: &str,
+        time: &DateTime<Utc>,
+    ) -> Result<Option<PostFile>> {
         let targ = self.reportpath(host, job, time)?;
         Ok(load_file(&targ)?)
     }
 
-    pub fn store(&self, host: &str, job: &str, time: &DateTime<Utc>,
-        post: &PostFile)
-        -> Result<()>
-    {
+    pub fn store(
+        &self,
+        host: &str,
+        job: &str,
+        time: &DateTime<Utc>,
+        post: &PostFile,
+    ) -> Result<()> {
         let targ = self.reportpath(host, job, time)?;
         Ok(store_file(&targ, post, false)?)
     }
@@ -397,14 +417,12 @@ impl KeyStore {
                 continue;
             }
 
-
             let kpath = ent.path();
 
             if let Ok(Some(f)) = load_file::<KeyFile>(&kpath) {
                 if key == &f.key {
                     if let Some(out) = out {
-                        bail!("duplicate keys? {} and {}", f.host,
-                            out.host);
+                        bail!("duplicate keys? {} and {}", f.host, out.host);
                     } else {
                         out = Some(Auth {
                             host: f.host.to_string(),
@@ -432,8 +450,10 @@ impl KeyStore {
          */
         match std::fs::metadata(&self.keypath("keys", Some(host))?) {
             Ok(f) if f.is_file() => {
-                warn!(self.log, "re-enrolment for already confirmed host {}",
-                    host);
+                warn!(
+                    self.log,
+                    "re-enrolment for already confirmed host {}", host
+                );
                 return Ok(true);
             }
             _ => {}

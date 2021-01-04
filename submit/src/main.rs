@@ -52,7 +52,8 @@ fn configure(cf: Option<&ConfigFile>) -> Result<Configuration> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cmd = std::env::args().nth(1)
+    let cmd = std::env::args()
+        .nth(1)
         .ok_or(anyhow!("must specify a command"))?;
 
     let cfgpath = if let Some(mut home) = dirs::home_dir() {
@@ -69,9 +70,11 @@ async fn main() -> Result<()> {
             /*
              * Accept intended hostname and base URL for enrolment.
              */
-            let host = std::env::args().nth(2)
+            let host = std::env::args()
+                .nth(2)
                 .ok_or(anyhow!("specify a host name for enrolment"))?;
-            let baseurl = std::env::args().nth(3)
+            let baseurl = std::env::args()
+                .nth(3)
                 .ok_or(anyhow!("specify a base URL for enrolment"))?;
 
             let cf = if let Some(cf) = cf {
@@ -95,7 +98,8 @@ async fn main() -> Result<()> {
                 let res = enrol(&cfg, EnrolBody {
                     host: cf.host.to_string(),
                     key: cf.key.to_string(),
-                }).await;
+                })
+                .await;
 
                 match res {
                     Ok(_) => {
@@ -122,10 +126,10 @@ async fn main() -> Result<()> {
             let cfg = configure(cf.as_ref())?;
             let cf = cf.unwrap();
 
-            let job = std::env::args().nth(2)
+            let job = std::env::args()
+                .nth(2)
                 .ok_or(anyhow!("specify a job name"))?;
-            let script = std::env::args().skip(3).collect::<Vec<_>>()
-                .join(" ");
+            let script = std::env::args().skip(3).collect::<Vec<_>>().join(" ");
             if script.is_empty() {
                 bail!("no script?");
             }
@@ -135,9 +139,7 @@ async fn main() -> Result<()> {
                 job,
                 uuid: genkey(32),
                 pid: std::process::id() as i32,
-                time: Utc::now()
-                    .format("%Y-%m-%dT%H:%M:%SZ")
-                    .to_string(),
+                time: Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
             };
 
             let start_time = Utc::now().to_string();
@@ -151,7 +153,8 @@ async fn main() -> Result<()> {
                     id: id.clone(),
                     start_time: start_time.clone(),
                     script: script.clone(),
-                }).await;
+                })
+                .await;
                 if let Err(e) = res {
                     println!("ERROR: {:?}", e);
                     sleep_ms(1000);
@@ -162,36 +165,34 @@ async fn main() -> Result<()> {
 
             loop {
                 match rx.recv()? {
-                    Activity::Output(o) => {
-                        loop {
-                            let res = report_output(&cfg, ReportOutputBody {
-                                id: id.clone(),
-                                record: o.to_record(),
-                            }).await;
-                            if let Err(e) = res {
-                                println!("ERROR: {:?}", e);
-                                sleep_ms(1000);
-                                continue;
-                            }
-                            break;
+                    Activity::Output(o) => loop {
+                        let res = report_output(&cfg, ReportOutputBody {
+                            id: id.clone(),
+                            record: o.to_record(),
+                        })
+                        .await;
+                        if let Err(e) = res {
+                            println!("ERROR: {:?}", e);
+                            sleep_ms(1000);
+                            continue;
                         }
-                    }
-                    Activity::Exit(ed) => {
-                        loop {
-                            let res = report_finish(&cfg, ReportFinishBody {
-                                id: id.clone(),
-                                duration_millis: ed.duration_ms as i32,
-                                end_time: ed.when.to_string(),
-                                exit_status: ed.code,
-                            }).await;
-                            if let Err(e) = res {
-                                println!("ERROR: {:?}", e);
-                                sleep_ms(1000);
-                                continue;
-                            }
-                            break;
+                        break;
+                    },
+                    Activity::Exit(ed) => loop {
+                        let res = report_finish(&cfg, ReportFinishBody {
+                            id: id.clone(),
+                            duration_millis: ed.duration_ms as i32,
+                            end_time: ed.when.to_string(),
+                            exit_status: ed.code,
+                        })
+                        .await;
+                        if let Err(e) = res {
+                            println!("ERROR: {:?}", e);
+                            sleep_ms(1000);
+                            continue;
                         }
-                    }
+                        break;
+                    },
                     Activity::Complete => {
                         break;
                     }
