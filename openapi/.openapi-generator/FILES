@@ -6,6 +6,7 @@ docs/DefaultApi.md
 docs/EnrolBody.md
 docs/GlobalJobsResult.md
 docs/OutputRecord.md
+docs/PingResult.md
 docs/ReportFinishBody.md
 docs/ReportId.md
 docs/ReportOutputBody.md
@@ -20,6 +21,7 @@ src/models/enrol_body.rs
 src/models/global_jobs_result.rs
 src/models/mod.rs
 src/models/output_record.rs
+src/models/ping_result.rs
 src/models/report_finish_body.rs
 src/models/report_id.rs
 src/models/report_output_body.rs

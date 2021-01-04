@@ -6,6 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**enrol**](DefaultApi.md#enrol) | **post** /enrol | 
 [**global_jobs**](DefaultApi.md#global_jobs) | **get** /global/jobs | 
+[**ping**](DefaultApi.md#ping) | **get** /ping | 
 [**report_finish**](DefaultApi.md#report_finish) | **post** /report/finish | 
 [**report_output**](DefaultApi.md#report_output) | **post** /report/output | 
 [**report_start**](DefaultApi.md#report_start) | **post** /report/start | 
@@ -52,6 +53,31 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**crate::models::GlobalJobsResult**](GlobalJobsResult.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## ping
+
+> crate::models::PingResult ping()
+
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**crate::models::PingResult**](PingResult.md)
 
 ### Authorization
 

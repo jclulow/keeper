@@ -481,6 +481,27 @@ async fn report_finish(
 }
 
 #[derive(Serialize, JsonSchema)]
+struct PingResult {
+    ok: bool,
+    host: String,
+}
+
+#[endpoint {
+    method = GET,
+    path = "/ping",
+}]
+async fn ping(
+    arc: Arc<RequestContext>,
+) -> SResult<HttpResponseCreated<PingResult>, HttpError> {
+    let app = App::from_request(&arc);
+
+    let req = arc.request.lock().await;
+    let auth = app.require_auth(&req).await?;
+
+    Ok(HttpResponseCreated(PingResult { ok: true, host: auth.host }))
+}
+
+#[derive(Serialize, JsonSchema)]
 struct GlobalJobsResult {
     summary: Vec<ReportSummary>,
 }
@@ -584,6 +605,7 @@ async fn main() -> Result<()> {
     api.register(report_output).unwrap();
     api.register(report_finish).unwrap();
     api.register(global_jobs).unwrap();
+    api.register(ping).unwrap();
 
     if let Some(s) = p.opt_str("S") {
         let mut f = std::fs::OpenOptions::new()

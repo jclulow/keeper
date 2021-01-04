@@ -27,6 +27,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**enrol**](docs/DefaultApi.md#enrol) | **post** /enrol | 
 *DefaultApi* | [**global_jobs**](docs/DefaultApi.md#global_jobs) | **get** /global/jobs | 
+*DefaultApi* | [**ping**](docs/DefaultApi.md#ping) | **get** /ping | 
 *DefaultApi* | [**report_finish**](docs/DefaultApi.md#report_finish) | **post** /report/finish | 
 *DefaultApi* | [**report_output**](docs/DefaultApi.md#report_output) | **post** /report/output | 
 *DefaultApi* | [**report_start**](docs/DefaultApi.md#report_start) | **post** /report/start | 
@@ -37,6 +38,7 @@ Class | Method | HTTP request | Description
  - [EnrolBody](docs/EnrolBody.md)
  - [GlobalJobsResult](docs/GlobalJobsResult.md)
  - [OutputRecord](docs/OutputRecord.md)
+ - [PingResult](docs/PingResult.md)
  - [ReportFinishBody](docs/ReportFinishBody.md)
  - [ReportId](docs/ReportId.md)
  - [ReportOutputBody](docs/ReportOutputBody.md)

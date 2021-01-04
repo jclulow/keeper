@@ -4,6 +4,8 @@ pub mod global_jobs_result;
 pub use self::global_jobs_result::GlobalJobsResult;
 pub mod output_record;
 pub use self::output_record::OutputRecord;
+pub mod ping_result;
+pub use self::ping_result::PingResult;
 pub mod report_finish_body;
 pub use self::report_finish_body::ReportFinishBody;
 pub mod report_id;
