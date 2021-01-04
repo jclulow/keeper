@@ -370,43 +370,52 @@ impl KeyStore {
         })
     }
 
-    fn keypath(&self, set: &str, host: &str) -> Result<PathBuf> {
-        if !name_ok(host) {
-            bail!("invalid hostname");
+    fn keypath(&self, set: &str, host: Option<&str>) -> Result<PathBuf> {
+        if let Some(host) = host {
+            if !name_ok(host) {
+                bail!("invalid hostname");
+            }
         }
 
         let mut kpath = self.dir.clone();
         kpath.push(set);
         std::fs::create_dir_all(&kpath)?;
-        kpath.push(&format!("{}.json", host));
+        if let Some(host) = host {
+            kpath.push(&format!("{}.json", host));
+        }
 
         Ok(kpath)
     }
 
-    pub fn check_key(&self, host: &str, key: &str) -> Result<Option<Auth>> {
-        if !name_ok(host) {
-            return Ok(None);
+    pub fn check_key(&self, key: &str) -> Result<Option<Auth>> {
+        let kdir = self.keypath("keys", None)?;
+
+        let mut dir = std::fs::read_dir(&kdir)?;
+        let mut out: Option<Auth> = None;
+        while let Some(ent) = dir.next().transpose()? {
+            if !ent.file_type()?.is_file() {
+                continue;
+            }
+
+
+            let kpath = ent.path();
+
+            if let Ok(Some(f)) = load_file::<KeyFile>(&kpath) {
+                if key == &f.key {
+                    if let Some(out) = out {
+                        bail!("duplicate keys? {} and {}", f.host,
+                            out.host);
+                    } else {
+                        out = Some(Auth {
+                            host: f.host.to_string(),
+                            global_view: f.global_view,
+                        });
+                    }
+                }
+            }
         }
-        let kpath = self.keypath("keys", host)?;
 
-        let kf: KeyFile = if let Some(kf) = load_file(&kpath)? {
-            kf
-        } else {
-            return Ok(None);
-        };
-
-        if host != &kf.host {
-            bail!("key file {} has wrong host {}", kpath.display(), kf.host);
-        }
-
-        Ok(if key == &kf.key {
-            Some(Auth {
-                host: kf.host.to_string(),
-                global_view: kf.global_view,
-            })
-        } else {
-            None
-        })
+        Ok(out)
     }
 
     pub fn enrol_key(&self, host: &str, key: &str) -> Result<bool> {
@@ -421,7 +430,7 @@ impl KeyStore {
          * This routine is run by the API layer with the rwlock held for write,
          * so multiple requests should not race here.
          */
-        match std::fs::metadata(&self.keypath("keys", host)?) {
+        match std::fs::metadata(&self.keypath("keys", Some(host))?) {
             Ok(f) if f.is_file() => {
                 warn!(self.log, "re-enrolment for already confirmed host {}",
                     host);
@@ -430,7 +439,7 @@ impl KeyStore {
             _ => {}
         }
 
-        let kpath = self.keypath("enrol", host)?;
+        let kpath = self.keypath("enrol", Some(host))?;
 
         let mut buf = serde_json::to_vec_pretty(&KeyFile {
             host: host.to_string(),

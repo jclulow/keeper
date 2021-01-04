@@ -31,7 +31,7 @@ fn configure(cf: Option<&ConfigFile>) -> Result<Configuration> {
         bail!("no configuration file; enrol first");
     };
 
-    let ah = format!("{} {}", cf.host, cf.key);
+    let ah = format!("Bearer {}", cf.key);
 
     let mut defhdr = HeaderMap::new();
     defhdr.insert(AUTHORIZATION, HeaderValue::from_str(&ah)?);

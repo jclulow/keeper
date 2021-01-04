@@ -88,12 +88,14 @@ impl App {
             if t.len() == 2 && t.iter().all(|s| !s.is_empty()) {
                 let keys = self.keys.read().await;
 
-                match keys.check_key(t[0], t[1]) {
-                    Ok(Some(auth)) => return Ok(auth),
-                    Ok(None) => (),
-                    Err(e) => {
-                        let msg = format!("internal error: {:?}", e);
-                        return Err(HttpError::for_internal_error(msg));
+                if t[0].to_lowercase().trim() == "bearer" {
+                    match keys.check_key(t[1]) {
+                        Ok(Some(auth)) => return Ok(auth),
+                        Ok(None) => (),
+                        Err(e) => {
+                            let msg = format!("internal error: {:?}", e);
+                            return Err(HttpError::for_internal_error(msg));
+                        }
                     }
                 }
             }
