@@ -160,9 +160,16 @@ async fn main() -> Result<()> {
                 std::thread::sleep(std::time::Duration::from_secs(5));
             }
         }
-        "exec" => {
+        "exec" | "cron" => {
             let cfg = configure(cf.as_ref())?;
             let cf = cf.unwrap();
+
+            /*
+             * If we are using the "cron" variant, don't emit error messages to
+             * stderr for transient issues as this will result in the cron mail
+             * we are generally trying to avoid!
+             */
+            let silent = cmd.as_str() == "cron";
 
             let job = std::env::args()
                 .nth(2)
@@ -194,7 +201,9 @@ async fn main() -> Result<()> {
                 })
                 .await;
                 if let Err(e) = res {
-                    println!("ERROR: {:?}", e);
+                    if !silent {
+                        println!("ERROR: {:?}", e);
+                    }
                     sleep_ms(1000);
                     continue;
                 }
@@ -210,7 +219,9 @@ async fn main() -> Result<()> {
                         })
                         .await;
                         if let Err(e) = res {
-                            println!("ERROR: {:?}", e);
+                            if !silent {
+                                println!("ERROR: {:?}", e);
+                            }
                             sleep_ms(1000);
                             continue;
                         }
@@ -225,7 +236,9 @@ async fn main() -> Result<()> {
                         })
                         .await;
                         if let Err(e) = res {
-                            println!("ERROR: {:?}", e);
+                            if !silent {
+                                println!("ERROR: {:?}", e);
+                            }
                             sleep_ms(1000);
                             continue;
                         }
