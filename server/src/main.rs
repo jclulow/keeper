@@ -8,7 +8,6 @@ use std::sync::Arc;
 use chrono::prelude::*;
 #[allow(unused_imports)]
 use slog::{debug, info, warn, error, Logger, o};
-use std::any::Any;
 #[allow(unused_imports)]
 use keeper_common::*;
 use tokio::sync::RwLock;
@@ -20,7 +19,7 @@ use dropshot::{
     ConfigDropshot,
     RequestContext,
     ApiDescription,
-    HttpServer,
+    HttpServerStarter,
     HttpError,
     HttpResponseCreated,
     endpoint,
@@ -63,14 +62,6 @@ struct App {
 }
 
 impl App {
-    fn from_private(ctx: Arc<dyn Any + Send + Sync + 'static>) -> Arc<App> {
-        ctx.downcast::<App>().expect("app downcast")
-    }
-
-    fn from_request(rqctx: &Arc<RequestContext>) -> Arc<App> {
-        Self::from_private(Arc::clone(&rqctx.server.private))
-    }
-
     async fn require_auth(
         &self,
         req: &Request<Body>,
@@ -123,11 +114,11 @@ struct EnrolBody {
     path = "/enrol",
 }]
 async fn enrol(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
     body: TypedBody<EnrolBody>,
 ) -> SResult<HttpResponseCreated<()>, HttpError> {
+    let app = arc.context();
     let body = body.into_inner();
-    let app = App::from_request(&arc);
 
     if !key_ok(&body.key) {
         return Err(HttpError::for_client_error(
@@ -182,11 +173,11 @@ struct ReportResult {
     path = "/report/start",
 }]
 async fn report_start(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
     body: TypedBody<ReportStartBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
+    let app = arc.context();
     let body = body.into_inner();
-    let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -283,11 +274,11 @@ struct ReportOutputBody {
     path = "/report/output",
 }]
 async fn report_output(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
     body: TypedBody<ReportOutputBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
+    let app = arc.context();
     let body = body.into_inner();
-    let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -394,11 +385,11 @@ struct ReportFinishBody {
     path = "/report/finish",
 }]
 async fn report_finish(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
     body: TypedBody<ReportFinishBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
+    let app = arc.context();
     let body = body.into_inner();
-    let app = App::from_request(&arc);
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -491,9 +482,9 @@ struct PingResult {
     path = "/ping",
 }]
 async fn ping(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
 ) -> SResult<HttpResponseCreated<PingResult>, HttpError> {
-    let app = App::from_request(&arc);
+    let app = arc.context();
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -511,9 +502,9 @@ struct GlobalJobsResult {
     path = "/global/jobs",
 }]
 async fn global_jobs(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
 ) -> SResult<HttpResponseCreated<GlobalJobsResult>, HttpError> {
-    let app = App::from_request(&arc);
+    let app = arc.context();
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -536,9 +527,9 @@ async fn global_jobs(
     path = "/global/metrics",
 }]
 async fn global_metrics(
-    arc: Arc<RequestContext>,
+    arc: Arc<RequestContext<App>>,
 ) -> SResult<Response<Body>, HttpError> {
-    let app = App::from_request(&arc);
+    let app = arc.context();
 
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
@@ -653,21 +644,20 @@ async fn main() -> Result<()> {
     let reportlog = log.new(o!("component" => "reportstore"));
     let reports = RwLock::new(ReportStore::new(reportlog, dir.clone())?);
 
-    let app = Arc::new(App {
+    let app = App {
         log: log.clone(),
         keys,
         reports,
-    });
+    };
 
     let cfgds = ConfigDropshot {
         bind_address: bind.parse()?,
         ..Default::default()
     };
 
-    let mut server = HttpServer::new(&cfgds, api, app, &log)?;
-    let task = server.run();
+    let server = HttpServerStarter::new(&cfgds, api, app, &log)?;
     server
-        .wait_for_shutdown(task)
+        .start()
         .await
         .map_err(|e| anyhow!("server task failure: {:?}", e))?;
     bail!("early exit is unexpected");

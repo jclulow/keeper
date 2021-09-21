@@ -5,7 +5,3 @@ members = [
 	"submit",
 	"common",
 ]
-
-[patch.crates-io]
-dropshot = { git = "https://github.com/jclulow/dropshot", branch = "keeper" }
-dropshot_endpoint = { git = "https://github.com/jclulow/dropshot", branch = "keeper" }
