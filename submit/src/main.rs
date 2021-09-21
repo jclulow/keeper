@@ -1,7 +1,5 @@
-use keeper_openapi::apis::configuration::Configuration;
-use keeper_openapi::apis::default_api::*;
-use keeper_openapi::models::*;
-use keeper_openapi::apis::Error;
+use keeper_openapi::Client;
+use keeper_openapi::types::*;
 use anyhow::{Result, anyhow, bail};
 use chrono::prelude::*;
 use reqwest::{
@@ -24,7 +22,7 @@ struct ConfigFile {
     key: String,
 }
 
-fn configure(cf: Option<&ConfigFile>) -> Result<Configuration> {
+fn make_client(cf: Option<&ConfigFile>) -> Result<Client> {
     let cf = if let Some(cf) = cf {
         cf
     } else {
@@ -43,11 +41,7 @@ fn configure(cf: Option<&ConfigFile>) -> Result<Configuration> {
         .tcp_keepalive(Duration::from_secs(30))
         .build()?;
 
-    Ok(Configuration {
-        base_path: cf.baseurl.to_string(),
-        client,
-        ..Default::default()
-    })
+    Ok(Client::new_with_client(&cf.baseurl, client))
 }
 
 #[tokio::main]
@@ -92,20 +86,22 @@ async fn main() -> Result<()> {
                 cf
             };
 
-            let cfg = configure(Some(&cf))?;
+            let c = make_client(Some(&cf))?;
+
+            let body = EnrolBody {
+                host: cf.host.to_string(),
+                key: cf.key.to_string(),
+            };
 
             loop {
-                let res = enrol(&cfg, EnrolBody {
-                    host: cf.host.to_string(),
-                    key: cf.key.to_string(),
-                })
-                .await;
-
-                match res {
+                match c.enrol(&body).await {
                     Ok(_) => {
                         println!("ok");
                         return Ok(());
                     }
+                    /*
+                     * XXX progenitor needs a real error type
+                     *
                     Err(Error::ResponseError(e)) => {
                         let status = e.status.as_u16();
                         if status >= 400 && status <= 499 {
@@ -114,23 +110,23 @@ async fn main() -> Result<()> {
                             eprintln!("request error; retrying: {:?}", e);
                         }
                     }
+                     * XXX
+                     */
                     Err(e) => {
                         eprintln!("other error; retrying: {:?}", e);
                     }
                 }
 
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                sleep_ms(1000);
             }
         }
         "ping" => {
-            let cfg = configure(cf.as_ref())?;
+            let c = make_client(cf.as_ref())?;
             let cf = cf.unwrap();
             let mut authfail_report = false;
 
             loop {
-                let res = ping(&cfg).await;
-
-                match res {
+                match c.ping().await {
                     Ok(p) => {
                         if p.host != cf.host {
                             bail!("remote host {} != local host {}", p.host,
@@ -139,6 +135,9 @@ async fn main() -> Result<()> {
                         println!("ok, host \"{}\"", p.host);
                         return Ok(());
                     }
+                    /*
+                     * XXX progenitor needs a real error type
+                     *
                     Err(Error::ResponseError(e)) => {
                         let status = e.status.as_u16();
                         if status == 403 || status == 401 {
@@ -152,16 +151,18 @@ async fn main() -> Result<()> {
                             eprintln!("request error; retrying: {:?}", e);
                         }
                     }
+                     * XXX
+                     */
                     Err(e) => {
                         eprintln!("other error; retrying: {:?}", e);
                     }
                 }
 
-                std::thread::sleep(std::time::Duration::from_secs(5));
+                sleep_ms(5000);
             }
         }
         "exec" | "cron" => {
-            let cfg = configure(cf.as_ref())?;
+            let c = make_client(cf.as_ref())?;
             let cf = cf.unwrap();
 
             /*
@@ -183,24 +184,23 @@ async fn main() -> Result<()> {
                 host: cf.host.clone(),
                 job,
                 uuid: genkey(32),
-                pid: std::process::id() as i32,
-                time: Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                pid: std::process::id() as i64,
+                time: Utc::now(),
             };
 
-            let start_time = Utc::now().to_string();
+            let start_time = Utc::now();
             let rx = exec::run(&["/usr/bin/bash", "-c", &script])?;
 
             /*
              * Report that the job has started to the server:
              */
+            let body = ReportStartBody {
+                id: id.clone(),
+                start_time: start_time.clone(),
+                script: script.clone(),
+            };
             loop {
-                let res = report_start(&cfg, ReportStartBody {
-                    id: id.clone(),
-                    start_time: start_time.clone(),
-                    script: script.clone(),
-                })
-                .await;
-                if let Err(e) = res {
+                if let Err(e) = c.report_start(&body).await {
                     if !silent {
                         println!("ERROR: {:?}", e);
                     }
@@ -213,7 +213,7 @@ async fn main() -> Result<()> {
             loop {
                 match rx.recv()? {
                     Activity::Output(o) => loop {
-                        let res = report_output(&cfg, ReportOutputBody {
+                        let res = c.report_output(&ReportOutputBody {
                             id: id.clone(),
                             record: o.to_record(),
                         })
@@ -228,10 +228,10 @@ async fn main() -> Result<()> {
                         break;
                     },
                     Activity::Exit(ed) => loop {
-                        let res = report_finish(&cfg, ReportFinishBody {
+                        let res = c.report_finish(&ReportFinishBody {
                             id: id.clone(),
-                            duration_millis: ed.duration_ms as i32,
-                            end_time: ed.when.to_string(),
+                            duration_millis: ed.duration_ms as i64,
+                            end_time: ed.when.clone(),
                             exit_status: ed.code,
                         })
                         .await;
