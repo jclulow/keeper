@@ -459,7 +459,7 @@ impl KeyStore {
             _ => {}
         }
 
-        let kpath = self.keypath("enrol", Some(host))?;
+        let kpath = self.keypath("keys", Some(host))?;
 
         let mut buf = serde_json::to_vec_pretty(&KeyFile {
             host: host.to_string(),
