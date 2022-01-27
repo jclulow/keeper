@@ -151,7 +151,7 @@ async fn enrol(
 struct ReportId {
     host: String,
     job: String,
-    pid: u64,
+    pid: u32,
     time: DateTime<Utc>,
     uuid: String,
 }
@@ -376,7 +376,7 @@ struct ReportFinishBody {
     id: ReportId,
 
     end_time: DateTime<Utc>,
-    duration_millis: i32,
+    duration_millis: u64,
     exit_status: i32,
 }
 
@@ -431,7 +431,7 @@ async fn report_finish(
                     existed_already: true,
                 }))
             } else {
-                f.duration = Some(body.duration_millis as u64);
+                f.duration = Some(body.duration_millis);
                 f.time_end = Some(body.end_time);
                 f.status = Some(body.exit_status);
                 f.sealed = true;

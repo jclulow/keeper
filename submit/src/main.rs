@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
         "ping" => {
             let c = make_client(cf.as_ref())?;
             let cf = cf.unwrap();
-            let mut authfail_report = false;
+            /* XXX let mut authfail_report = false; */
 
             loop {
                 match c.ping().await {
@@ -184,7 +184,7 @@ async fn main() -> Result<()> {
                 host: cf.host.clone(),
                 job,
                 uuid: genkey(32),
-                pid: std::process::id() as i64,
+                pid: std::process::id(),
                 time: Utc::now(),
             };
 
@@ -230,7 +230,7 @@ async fn main() -> Result<()> {
                     Activity::Exit(ed) => loop {
                         let res = c.report_finish(&ReportFinishBody {
                             id: id.clone(),
-                            duration_millis: ed.duration_ms as i64,
+                            duration_millis: ed.duration_ms,
                             end_time: ed.when.clone(),
                             exit_status: ed.code,
                         })

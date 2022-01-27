@@ -501,7 +501,7 @@ pub struct OutputRecord {
 
 #[derive(Serialize, Deserialize)]
 pub struct PostFile {
-    pub report_pid: u64,
+    pub report_pid: u32,
     pub report_uuid: String,
     pub report_time: DateTime<Utc>,
     pub time_start: DateTime<Utc>,

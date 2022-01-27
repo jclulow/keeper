@@ -65,7 +65,7 @@ where
 pub struct ExitDetails {
     pub duration_ms: u64,
     pub when: DateTime<Utc>,
-    pub code: i64,
+    pub code: i32,
 }
 
 #[derive(Clone)]
@@ -73,7 +73,6 @@ pub struct OutputDetails {
     stream: String,
     msg: String,
     time: DateTime<Utc>,
-    instant: Instant,
 }
 
 impl OutputDetails {
@@ -97,7 +96,7 @@ impl Activity {
         Activity::Exit(ExitDetails {
             duration_ms: end.duration_since(*start).as_millis() as u64,
             when: Utc::now(),
-            code: code as i64,
+            code,
         })
     }
 
@@ -106,7 +105,6 @@ impl Activity {
             stream: stream.to_string(),
             msg: msg.to_string(),
             time: Utc::now(),
-            instant: Instant::now(),
         })
     }
 
@@ -115,7 +113,6 @@ impl Activity {
             stream: "error".to_string(),
             msg: msg.to_string(),
             time: Utc::now(),
-            instant: Instant::now(),
         })
     }
 }
