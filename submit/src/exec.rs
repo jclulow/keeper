@@ -1,12 +1,12 @@
-use chrono::prelude::*;
 use super::OutputRecord;
-use std::sync::mpsc::{Receiver, Sender, channel};
-use std::process::{Command, Stdio};
-use std::os::unix::process::ExitStatusExt;
-use std::io::{Read, BufReader, BufRead};
-use std::ffi::OsStr;
-use std::time::Instant;
 use anyhow::Result;
+use chrono::prelude::*;
+use std::ffi::OsStr;
+use std::io::{BufRead, BufReader, Read};
+use std::os::unix::process::ExitStatusExt;
+use std::process::{Command, Stdio};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::time::Instant;
 
 fn spawn_reader<T>(
     tx: Sender<Activity>,

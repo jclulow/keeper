@@ -22,11 +22,14 @@ impl Emitter {
     }
 
     pub fn define(&mut self, statname: &str, stattype: &str, statdesc: &str) {
-        self.typedefs.insert(statname.to_string(), EmitterStat {
-            name: statname.to_string(),
-            typ: stattype.to_string(),
-            desc: statdesc.to_string(),
-        });
+        self.typedefs.insert(
+            statname.to_string(),
+            EmitterStat {
+                name: statname.to_string(),
+                typ: stattype.to_string(),
+                desc: statdesc.to_string(),
+            },
+        );
     }
 
     fn emit_header(&mut self, stat_name: &str) {

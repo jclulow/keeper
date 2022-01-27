@@ -123,7 +123,10 @@ impl Client {
     }
 
     #[doc = "enrol: POST /enrol"]
-    pub async fn enrol<'a>(&'a self, body: &'a types::EnrolBody) -> Result<reqwest::Response> {
+    pub async fn enrol<'a>(
+        &'a self,
+        body: &'a types::EnrolBody,
+    ) -> Result<reqwest::Response> {
         let url = format!("{}/enrol", self.baseurl,);
         let request = self.client.post(url).json(body).build()?;
         let result = self.client.execute(request).await;

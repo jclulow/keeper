@@ -1,8 +1,2 @@
 max_width = 80
-reorder_imports = false
-imports_layout = "HorizontalVertical"
-overflow_delimited_expr = true
-required_version = "1.4.19"
-ignore = [
-	"openapi"
-]
+edition = "2021"

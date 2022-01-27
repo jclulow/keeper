@@ -1,12 +1,12 @@
-use std::path::{PathBuf, Path};
-use anyhow::{Result, bail, Context};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::io::{Write, BufWriter};
+use anyhow::{bail, Context, Result};
 use chrono::prelude::*;
-#[allow(unused_imports)]
-use slog::{debug, info, warn, error, Logger};
 use keeper_common::*;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
+use slog::{debug, error, info, warn, Logger};
+use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize)]
 pub struct KeyFile {

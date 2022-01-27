@@ -1,16 +1,14 @@
-use keeper_openapi::Client;
-use keeper_openapi::types::*;
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use chrono::prelude::*;
-use reqwest::{
-    ClientBuilder,
-    header::HeaderMap,
-    header::HeaderValue,
-    header::AUTHORIZATION,
-};
-use std::time::Duration;
-use serde::{Serialize, Deserialize};
 use keeper_common::*;
+use keeper_openapi::types::*;
+use keeper_openapi::Client;
+use reqwest::{
+    header::HeaderMap, header::HeaderValue, header::AUTHORIZATION,
+    ClientBuilder,
+};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 mod exec;
 use exec::Activity;
@@ -129,8 +127,11 @@ async fn main() -> Result<()> {
                 match c.ping().await {
                     Ok(p) => {
                         if p.host != cf.host {
-                            bail!("remote host {} != local host {}", p.host,
-                                cf.host);
+                            bail!(
+                                "remote host {} != local host {}",
+                                p.host,
+                                cf.host
+                            );
                         }
                         println!("ok, host \"{}\"", p.host);
                         return Ok(());
@@ -213,11 +214,12 @@ async fn main() -> Result<()> {
             loop {
                 match rx.recv()? {
                     Activity::Output(o) => loop {
-                        let res = c.report_output(&ReportOutputBody {
-                            id: id.clone(),
-                            record: o.to_record(),
-                        })
-                        .await;
+                        let res = c
+                            .report_output(&ReportOutputBody {
+                                id: id.clone(),
+                                record: o.to_record(),
+                            })
+                            .await;
                         if let Err(e) = res {
                             if !silent {
                                 println!("ERROR: {:?}", e);
@@ -228,13 +230,14 @@ async fn main() -> Result<()> {
                         break;
                     },
                     Activity::Exit(ed) => loop {
-                        let res = c.report_finish(&ReportFinishBody {
-                            id: id.clone(),
-                            duration_millis: ed.duration_ms,
-                            end_time: ed.when.clone(),
-                            exit_status: ed.code,
-                        })
-                        .await;
+                        let res = c
+                            .report_finish(&ReportFinishBody {
+                                id: id.clone(),
+                                duration_millis: ed.duration_ms,
+                                end_time: ed.when.clone(),
+                                exit_status: ed.code,
+                            })
+                            .await;
                         if let Err(e) = res {
                             if !silent {
                                 println!("ERROR: {:?}", e);

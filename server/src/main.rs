@@ -1,31 +1,24 @@
-use std::path::PathBuf;
-use anyhow::{Result, bail, anyhow};
-use getopts::Options;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::result::Result as SResult;
-use std::sync::Arc;
+use anyhow::{anyhow, bail, Result};
 use chrono::prelude::*;
-#[allow(unused_imports)]
-use slog::{debug, info, warn, error, Logger, o};
+use getopts::Options;
+use hyper::{Body, Request, Response};
 #[allow(unused_imports)]
 use keeper_common::*;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
+use slog::{debug, error, info, o, warn, Logger};
+use std::path::PathBuf;
+use std::result::Result as SResult;
+use std::sync::Arc;
 use tokio::sync::RwLock;
-use hyper::{Response, Request, Body};
 
 use dropshot::{
-    ConfigLogging,
-    ConfigLoggingLevel,
-    ConfigDropshot,
-    RequestContext,
-    ApiDescription,
-    HttpServerStarter,
-    HttpError,
-    HttpResponseCreated,
-    endpoint,
-    TypedBody,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
+    ConfigLoggingLevel, HttpError, HttpResponseCreated, HttpServerStarter,
+    RequestContext, TypedBody,
 };
-use hyper::{StatusCode, header::AUTHORIZATION};
+use hyper::{header::AUTHORIZATION, StatusCode};
 
 mod store;
 use store::*;
@@ -489,7 +482,10 @@ async fn ping(
     let req = arc.request.lock().await;
     let auth = app.require_auth(&req).await?;
 
-    Ok(HttpResponseCreated(PingResult { ok: true, host: auth.host }))
+    Ok(HttpResponseCreated(PingResult {
+        ok: true,
+        host: auth.host,
+    }))
 }
 
 #[derive(Serialize, JsonSchema)]

@@ -1,11 +1,11 @@
-use std::fs::{File, OpenOptions};
-use std::os::unix::fs::OpenOptionsExt;
-use std::io::{Read, Write, BufReader, BufWriter, ErrorKind};
-use std::path::Path;
-use serde::{Serialize, Deserialize};
-use anyhow::{Result, bail};
-use rand::{thread_rng, Rng};
+use anyhow::{bail, Result};
 use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufWriter, ErrorKind, Read, Write};
+use std::os::unix::fs::OpenOptionsExt;
+use std::path::Path;
 
 pub fn load_file<T>(p: &Path) -> Result<Option<T>>
 where
