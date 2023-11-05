@@ -327,7 +327,7 @@ impl ReportStore {
                                     continue 'job;
                                 }
 
-                                let dt = Utc.timestamp_millis(*r);
+                                let dt = Utc.timestamp_millis_opt(*r).unwrap();
                                 let t = self.reportpath(host, job, &dt)?;
 
                                 if let Ok(Some(p)) = load_file::<PostFile>(&t) {

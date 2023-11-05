@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use chrono::prelude::*;
 use getopts::Options;
-use hyper::{Body, Request, Response};
+use hyper::{Body, Response};
 #[allow(unused_imports)]
 use keeper_common::*;
 use schemars::JsonSchema;
@@ -10,13 +10,12 @@ use serde::{Deserialize, Serialize};
 use slog::{debug, error, info, o, warn, Logger};
 use std::path::PathBuf;
 use std::result::Result as SResult;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseCreated, HttpServerStarter,
-    RequestContext, TypedBody,
+    RequestContext, RequestInfo, TypedBody,
 };
 use hyper::{header::AUTHORIZATION, StatusCode};
 
@@ -57,7 +56,7 @@ struct App {
 impl App {
     async fn require_auth(
         &self,
-        req: &Request<Body>,
+        req: &RequestInfo,
     ) -> SResult<Auth, HttpError> {
         let v = if let Some(h) = req.headers().get(AUTHORIZATION) {
             if let Ok(v) = h.to_str() {
@@ -107,7 +106,7 @@ struct EnrolBody {
     path = "/enrol",
 }]
 async fn enrol(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
     body: TypedBody<EnrolBody>,
 ) -> SResult<HttpResponseCreated<()>, HttpError> {
     let app = arc.context();
@@ -166,14 +165,13 @@ struct ReportResult {
     path = "/report/start",
 }]
 async fn report_start(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
     body: TypedBody<ReportStartBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let app = arc.context();
     let body = body.into_inner();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
     if body.id.host != auth.host {
         return Err(HttpError::for_client_error(
             None,
@@ -267,14 +265,13 @@ struct ReportOutputBody {
     path = "/report/output",
 }]
 async fn report_output(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
     body: TypedBody<ReportOutputBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let app = arc.context();
     let body = body.into_inner();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
     if body.id.host != auth.host {
         return Err(HttpError::for_client_error(
             None,
@@ -378,14 +375,13 @@ struct ReportFinishBody {
     path = "/report/finish",
 }]
 async fn report_finish(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
     body: TypedBody<ReportFinishBody>,
 ) -> SResult<HttpResponseCreated<ReportResult>, HttpError> {
     let app = arc.context();
     let body = body.into_inner();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
     if body.id.host != auth.host {
         return Err(HttpError::for_client_error(
             None,
@@ -475,12 +471,11 @@ struct PingResult {
     path = "/ping",
 }]
 async fn ping(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
 ) -> SResult<HttpResponseCreated<PingResult>, HttpError> {
     let app = arc.context();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
 
     Ok(HttpResponseCreated(PingResult {
         ok: true,
@@ -498,12 +493,11 @@ struct GlobalJobsResult {
     path = "/global/jobs",
 }]
 async fn global_jobs(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
 ) -> SResult<HttpResponseCreated<GlobalJobsResult>, HttpError> {
     let app = arc.context();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
     if !auth.global_view {
         return Err(HttpError::for_client_error(
             None,
@@ -521,14 +515,14 @@ async fn global_jobs(
 #[endpoint {
     method = GET,
     path = "/global/metrics",
+    unpublished = true,
 }]
 async fn global_metrics(
-    arc: Arc<RequestContext<App>>,
+    arc: RequestContext<App>,
 ) -> SResult<Response<Body>, HttpError> {
     let app = arc.context();
 
-    let req = arc.request.lock().await;
-    let auth = app.require_auth(&req).await?;
+    let auth = app.require_auth(&arc.request).await?;
     if !auth.global_view {
         return Err(HttpError::for_client_error(
             None,
@@ -592,6 +586,7 @@ async fn main() -> Result<()> {
     api.register(report_output).unwrap();
     api.register(report_finish).unwrap();
     api.register(global_jobs).unwrap();
+    api.register(global_metrics).unwrap();
     api.register(ping).unwrap();
 
     if let Some(s) = p.opt_str("S") {
@@ -609,13 +604,6 @@ async fn main() -> Result<()> {
             .write(&mut f)?;
         return Ok(());
     }
-
-    /*
-     * Add some additional handlers that we do not wish to appear in the OpenAPI
-     * definition document.  These must be added _after_ any rendering of the
-     * definition, but before the server is stood up.
-     */
-    api.register(global_metrics).unwrap();
 
     let bind = p
         .opt_str("b")
@@ -648,10 +636,12 @@ async fn main() -> Result<()> {
 
     let cfgds = ConfigDropshot {
         bind_address: bind.parse()?,
+        request_body_max_bytes: 1024 * 1024,
         ..Default::default()
     };
 
-    let server = HttpServerStarter::new(&cfgds, api, app, &log)?;
+    let server = HttpServerStarter::new(&cfgds, api, app, &log)
+        .map_err(|e| anyhow!("server starter failure: {:?}", e))?;
     server
         .start()
         .await

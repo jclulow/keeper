@@ -1,14 +1,8 @@
 use anyhow::{anyhow, bail, Result};
 use chrono::prelude::*;
 use keeper_common::*;
-use keeper_openapi::types::*;
-use keeper_openapi::Client;
-use reqwest::{
-    header::HeaderMap, header::HeaderValue, header::AUTHORIZATION,
-    ClientBuilder,
-};
+use keeper_openapi::{types::*, Client};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 mod exec;
 use exec::Activity;
@@ -27,19 +21,9 @@ fn make_client(cf: Option<&ConfigFile>) -> Result<Client> {
         bail!("no configuration file; enrol first");
     };
 
-    let ah = format!("Bearer {}", cf.key);
-
-    let mut defhdr = HeaderMap::new();
-    defhdr.insert(AUTHORIZATION, HeaderValue::from_str(&ah)?);
-
-    let client = ClientBuilder::new()
-        .default_headers(defhdr)
-        .timeout(Duration::from_secs(15))
-        .connect_timeout(Duration::from_secs(10))
-        .tcp_keepalive(Duration::from_secs(30))
-        .build()?;
-
-    Ok(Client::new_with_client(&cf.baseurl, client))
+    Ok(keeper_openapi::ClientBuilder::new(&cf.baseurl)
+        .bearer_token(&cf.key)
+        .build()?)
 }
 
 #[tokio::main]
@@ -92,7 +76,7 @@ async fn main() -> Result<()> {
             };
 
             loop {
-                match c.enrol(&body).await {
+                match c.enrol().body(&body).send().await {
                     Ok(_) => {
                         println!("ok");
                         return Ok(());
@@ -124,7 +108,7 @@ async fn main() -> Result<()> {
             /* XXX let mut authfail_report = false; */
 
             loop {
-                match c.ping().await {
+                match c.ping().send().await {
                     Ok(p) => {
                         if p.host != cf.host {
                             bail!(
@@ -181,13 +165,12 @@ async fn main() -> Result<()> {
                 bail!("no script?");
             }
 
-            let id = ReportId {
-                host: cf.host.clone(),
-                job,
-                uuid: genkey(32),
-                pid: std::process::id(),
-                time: Utc::now(),
-            };
+            let id = ReportId::builder()
+                .host(&cf.host)
+                .job(&job)
+                .uuid(genkey(32))
+                .pid(std::process::id())
+                .time(Utc::now());
 
             let start_time = Utc::now();
             let rx = exec::run(&["/usr/bin/bash", "-c", &script])?;
@@ -195,13 +178,14 @@ async fn main() -> Result<()> {
             /*
              * Report that the job has started to the server:
              */
-            let body = ReportStartBody {
-                id: id.clone(),
-                start_time: start_time.clone(),
-                script: script.clone(),
-            };
+            let body = ReportStartBody::builder()
+                .id(id.clone())
+                .script(&script)
+                .start_time(start_time);
+
             loop {
-                if let Err(e) = c.report_start(&body).await {
+                if let Err(e) = c.report_start().body(body.clone()).send().await
+                {
                     if !silent {
                         println!("ERROR: {:?}", e);
                     }
@@ -215,10 +199,11 @@ async fn main() -> Result<()> {
                 match rx.recv()? {
                     Activity::Output(o) => loop {
                         let res = c
-                            .report_output(&ReportOutputBody {
-                                id: id.clone(),
-                                record: o.to_record(),
+                            .report_output()
+                            .body_map(|b| {
+                                b.id(id.clone()).record(o.to_record())
                             })
+                            .send()
                             .await;
                         if let Err(e) = res {
                             if !silent {
@@ -231,12 +216,14 @@ async fn main() -> Result<()> {
                     },
                     Activity::Exit(ed) => loop {
                         let res = c
-                            .report_finish(&ReportFinishBody {
-                                id: id.clone(),
-                                duration_millis: ed.duration_ms,
-                                end_time: ed.when.clone(),
-                                exit_status: ed.code,
+                            .report_finish()
+                            .body_map(|b| {
+                                b.id(id.clone())
+                                    .duration_millis(ed.duration_ms)
+                                    .end_time(ed.when)
+                                    .exit_status(ed.code)
                             })
+                            .send()
                             .await;
                         if let Err(e) = res {
                             if !silent {
