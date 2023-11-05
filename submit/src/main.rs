@@ -21,9 +21,9 @@ fn make_client(cf: Option<&ConfigFile>) -> Result<Client> {
         bail!("no configuration file; enrol first");
     };
 
-    Ok(keeper_openapi::ClientBuilder::new(&cf.baseurl)
+    keeper_openapi::ClientBuilder::new(&cf.baseurl)
         .bearer_token(&cf.key)
-        .build()?)
+        .build()
 }
 
 #[tokio::main]

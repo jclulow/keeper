@@ -593,7 +593,7 @@ async fn main() -> Result<()> {
         let mut f = std::fs::OpenOptions::new()
             .create_new(true)
             .write(true)
-            .open(&s)?;
+            .open(s)?;
         api.openapi("Keeper API", "1.0")
             .description(
                 "report execution of cron jobs through a \

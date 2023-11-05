@@ -80,7 +80,7 @@ impl OutputDetails {
         OutputRecord {
             stream: self.stream.to_string(),
             msg: self.msg.to_string(),
-            time: self.time.clone(),
+            time: self.time,
         }
     }
 }
@@ -122,7 +122,7 @@ pub fn run<S: AsRef<OsStr>>(args: &[S]) -> Result<Receiver<Activity>> {
 
     let (tx, rx) = channel::<Activity>();
 
-    let mut cmd = Command::new(&args[0]);
+    let mut cmd = Command::new(args[0]);
 
     if args.len() > 1 {
         cmd.args(&args[1..]);

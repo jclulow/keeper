@@ -362,7 +362,7 @@ impl ReportStore {
         time: &DateTime<Utc>,
     ) -> Result<Option<PostFile>> {
         let targ = self.reportpath(host, job, time)?;
-        Ok(load_file(&targ)?)
+        load_file(&targ)
     }
 
     pub fn store(
@@ -373,7 +373,7 @@ impl ReportStore {
         post: &PostFile,
     ) -> Result<()> {
         let targ = self.reportpath(host, job, time)?;
-        Ok(store_file(&targ, post, false)?)
+        store_file(&targ, post, false)
     }
 }
 
@@ -420,7 +420,7 @@ impl KeyStore {
             let kpath = ent.path();
 
             if let Ok(Some(f)) = load_file::<KeyFile>(&kpath) {
-                if key == &f.key {
+                if key == f.key {
                     if let Some(out) = out {
                         bail!("duplicate keys? {} and {}", f.host, out.host);
                     } else {
@@ -448,7 +448,7 @@ impl KeyStore {
          * This routine is run by the API layer with the rwlock held for write,
          * so multiple requests should not race here.
          */
-        match std::fs::metadata(&self.keypath("keys", Some(host))?) {
+        match std::fs::metadata(self.keypath("keys", Some(host))?) {
             Ok(f) if f.is_file() => {
                 warn!(
                     self.log,
@@ -472,7 +472,7 @@ impl KeyStore {
         let fres = std::fs::OpenOptions::new()
             .create_new(true)
             .write(true)
-            .open(&kpath);
+            .open(kpath);
         let f = match fres {
             Ok(f) => f,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
@@ -486,7 +486,7 @@ impl KeyStore {
             Err(e) => bail!("enrol key failure: {:?}", e),
         };
         let mut bw = BufWriter::new(f);
-        bw.write_all(&mut buf)?;
+        bw.write_all(&buf)?;
         bw.flush()?;
         Ok(true)
     }
