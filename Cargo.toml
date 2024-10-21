@@ -10,21 +10,18 @@ members = [
 
 [workspace.dependencies]
 anyhow = "1"
-bytes = "1.5"
 chrono = { version = "0.4", features = ["serde"] }
-dirs = "2"
+dirs = "5"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot.git" }
 futures = "0.3"
-futures-core = "0.3"
 getopts = "0.2"
-hyper = "0.14"
-percent-encoding = "2.3"
+hiercmd = { git = "https://github.com/jclulow/hiercmd.git" }
+hyper = "1"
 progenitor = { git = "https://github.com/oxidecomputer/progenitor" }
 rand = "0.8"
-reqwest = { version = "^0.11", default-features = false, features = ["json", "native-tls-vendored", "stream"]}
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls-vendored", "stream"]}
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 slog = "2.7"
 tokio = { version = "1", features = ["full"] }
-toml = "0.8"

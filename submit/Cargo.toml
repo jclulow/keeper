@@ -10,6 +10,7 @@ keeper-openapi = { path = "../openapi" }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 dirs = { workspace = true }
+hiercmd = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use chrono::prelude::*;
 use getopts::Options;
-use hyper::{Body, Response};
+use hyper::Response;
 #[allow(unused_imports)]
 use keeper_common::*;
 use schemars::JsonSchema;
@@ -13,7 +13,7 @@ use std::result::Result as SResult;
 use tokio::sync::RwLock;
 
 use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
+    endpoint, ApiDescription, Body, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseCreated, HttpServerStarter,
     RequestContext, RequestInfo, TypedBody,
 };
